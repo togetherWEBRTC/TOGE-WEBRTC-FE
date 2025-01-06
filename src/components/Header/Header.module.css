@@ -1,0 +1,34 @@
+.header {
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  background-color: #2020202c;
+  text-align: center;
+  font-weight: bold;
+}
+
+.header div {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  background-color: darkgray;
+  text-align: center;
+  width: 3rem;
+  height: 3rem;
+  margin-right: 1rem;
+}
+
+.header h3 {
+  font-size: 2rem;
+}
+
+.header button {
+  background-color: #f1f1f1;
+  margin: 0.5rem;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
