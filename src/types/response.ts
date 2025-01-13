@@ -1,0 +1,15 @@
+import { ResCode } from "./../constants/response";
+import { IauthUser } from "./session";
+
+type ResCodeType = (typeof ResCode)[keyof typeof ResCode];
+
+interface BaseResponse {
+  code: ResCodeType["code"];
+  message: ResCodeType["message"];
+}
+
+export interface LoginResponse extends BaseResponse {
+  userInfo?: IauthUser;
+  accessToken?: string;
+  refreshToken?: string;
+}

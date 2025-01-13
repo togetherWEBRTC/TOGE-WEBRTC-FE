@@ -1,6 +1,10 @@
+import { Link } from "react-router";
+import useSession from "../../hooks/useSession";
 import styles from "./Header.module.css";
 
 export default function Header() {
+  const { authUser } = useSession();
+
   return (
     <header className={styles.header}>
       <div>
@@ -9,7 +13,11 @@ export default function Header() {
       </div>
       <div>
         <button>설정</button>
-        <button>유저</button>
+        {authUser ? (
+          <img src={authUser.profileUrl} alt="profile" />
+        ) : (
+          <Link to="/login">로그인</Link>
+        )}
       </div>
     </header>
   );
