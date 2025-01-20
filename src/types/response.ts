@@ -3,7 +3,7 @@ import { IauthUser } from "./session";
 
 type ResCodeType = (typeof ResCode)[keyof typeof ResCode];
 
-interface BaseResponse {
+export interface BaseResponse {
   code: ResCodeType["code"];
   message: ResCodeType["message"];
 }

@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { ResCode } from "../constants/response";
 
 const tokenValue =
-  "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1c2VyX2lkIiwibmlja25hbWUiOiJuaWNrbmFtZV9hIiwicHJvZmlsZVVybCI6InByb2ZpbGUvMy5wbmciLCJhdWQiOlsiYXVkX3dlYiIsImF1ZF9tb2JpbGUiXSwiZXhwIjoxNzM2Njk3OTAyLCJpYXQiOjE3MzY2MTE1MDJ9.j2Ez4vwna3yrjGCHnXImrfKvffAq8Po8S9do57W-No0";
+  "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1c2VyX2lkMiIsIm5pY2tuYW1lIjoibmlja25hbWVfYSIsInByb2ZpbGVVcmwiOiJwcm9maWxlLzExMy5wbmciLCJhdWQiOlsiYXVkX3dlYiIsImF1ZF9tb2JpbGUiXSwiZXhwIjoxNzM5NDI5NDg5LCJpYXQiOjE3MzY4Mzc0ODl9.ssnHkfflDxpi9MQSZkinwjaGYuQkty5MsUjbwcAjfrc";
 
 export const handlers = [
   // 로그인 성공
@@ -66,6 +66,23 @@ export const handlers = [
   //     }
   //   );
   // }),
+
+  // 로그아웃
+  http.post("/auth/logout", () => {
+    return HttpResponse.json(
+      {
+        code: ResCode.SUCCESS.code,
+        message: ResCode.SUCCESS.message,
+      },
+      {
+        headers: {
+          "content-type": "application/json",
+          "Set-Cookie":
+            "refreshToken=mock-refresh-token; HttpOnly; Path=/; Max-Age=0;",
+        },
+      }
+    );
+  }),
 
   // 아이디 중복 체크
   http.get("/auth/check-id/test", () => {
