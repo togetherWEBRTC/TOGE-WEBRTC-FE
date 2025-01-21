@@ -10,3 +10,124 @@ body,
   margin: 0;
   padding: 0;
 }
+
+h1 {
+  font-size: 96px;
+  line-height: 144px;
+}
+
+h2 {
+  font-size: 60px;
+  line-height: 90px;
+}
+
+h3 {
+  font-size: 48px;
+  line-height: 72px;
+}
+
+h4 {
+  font-size: 34px;
+  line-height: 50px;
+}
+
+h5 {
+  font-size: 24px;
+  line-height: 36px;
+}
+
+h6 {
+  font-size: 20px;
+  line-height: 30px;
+}
+
+:root {
+  --white: #ffffff;
+  --black: #0b0b0b;
+
+  --grey-20: #fafafa;
+  --grey-50: #f4f4f4;
+  --grey-100: #e8e8e8;
+  --grey-200: #d1d1d1;
+  --grey-300: #bababa;
+  --grey-400: #a3a3a3;
+  --grey-500: #8c8c8c;
+  --grey-600: #767676;
+  --grey-700: #5f5f5f;
+  --grey-800: #484848;
+  --grey-900: #313131;
+  --grey-999: #1a1a1a;
+
+  --primary-20: #f5f8ff;
+  --primary-50: #ebf2ff;
+  --primary-100: #d7e5fe;
+  --primary-200: #b0cbfe;
+  --primary-300: #88b0fd;
+  --primary-400: #6196fd;
+  --primary-500: #397cfc;
+  --primary-600: #3069d6;
+  --primary-700: #2b5dbd;
+  --primary-800: #2551a4;
+  --primary-900: #1f448b;
+  --primary-999: #1a3871;
+
+  --secondary-20: #f6fcff;
+  --secondary-50: #ecf8ff;
+  --secondary-100: #daf1ff;
+  --secondary-200: #b4e4ff;
+  --secondary-300: #8fd6ff;
+  --secondary-400: #69c8ff;
+  --secondary-500: #44baff;
+  --secondary-600: #3a9ed9;
+  --secondary-700: #338cbf;
+  --secondary-800: #2c79a6;
+  --secondary-900: #25678c;
+  --secondary-999: #1f5473;
+
+  --crimson-20: #fdf2f2;
+  --crimson-50: #fbe6e6;
+  --crimson-100: #f8cccc;
+  --crimson-200: #f09999;
+  --crimson-300: #e96666;
+  --crimson-400: #e13333;
+  --crimson-500: #da0000;
+  --crimson-600: #b90000;
+  --crimson-700: #a30000;
+  --crimson-800: #8e0000;
+  --crimson-900: #780000;
+  --crimson-999: #620000;
+
+  --success-20: #f2fdf8;
+  --success-50: #e6fbf1;
+  --success-100: #ccf8e3;
+  --success-200: #99f0c8;
+  --success-300: #66e9ac;
+  --success-400: #33e190;
+  --success-500: #00da74;
+
+  --warning-20: #fffcf3;
+  --warning-50: #fff9e6;
+  --warning-100: #fff3cd;
+  --warning-200: #ffe69c;
+  --warning-300: #ffda6a;
+  --warning-400: #ffcd39;
+  --warning-500: #ffc107;
+
+  --font-size-subtitle1: 16px;
+  --line-height-subtitle1: 24px;
+  --font-size-subtitle2: 14px;
+  --line-height-subtitle2: 20px;
+  --font-size-body1: 16px;
+  --line-height-body1: 24px;
+  --font-size-body2: 14px;
+  --line-height-body2: 20px;
+  --font-size-caption-text: 12px;
+  --line-height-caption-text: 18px;
+  --font-size-overline-text: 10px;
+  --line-height-overline-text: 14px;
+
+  --font-size-button2: 14px;
+  --line-height-button2: 18px;
+  --font-size-button1: 16px;
+  --line-height-button1: 24px;
+}
