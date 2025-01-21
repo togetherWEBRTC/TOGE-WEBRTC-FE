@@ -1,8 +1,11 @@
+@import "pretendard/dist/web/static/pretendard.css";
+
 html,
 body,
 #root {
   width: 100%;
   height: 100%;
+  font-family: "Pretendard", sans-serif;
 }
 
 * {
@@ -13,32 +16,45 @@ body,
 
 h1 {
   font-size: 96px;
+  font-weight: bold;
   line-height: 144px;
 }
 
 h2 {
   font-size: 60px;
+  font-weight: bold;
   line-height: 90px;
 }
 
 h3 {
   font-size: 48px;
+  font-weight: bold;
   line-height: 72px;
 }
 
 h4 {
   font-size: 34px;
+  font-weight: bold;
   line-height: 50px;
 }
 
 h5 {
   font-size: 24px;
+  font-weight: bold;
   line-height: 36px;
 }
 
 h6 {
   font-size: 20px;
+  font-weight: medium;
   line-height: 30px;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 :root {
@@ -114,20 +130,34 @@ h6 {
   --warning-500: #ffc107;
 
   --font-size-subtitle1: 16px;
+  --font-weight-subtitle1: 400;
   --line-height-subtitle1: 24px;
+
   --font-size-subtitle2: 14px;
+  --font-weight-subtitle2: 500;
   --line-height-subtitle2: 20px;
+
   --font-size-body1: 16px;
+  --font-weight-body1: 400;
   --line-height-body1: 24px;
+
   --font-size-body2: 14px;
+  --font-weight-body2: 400;
   --line-height-body2: 20px;
+
   --font-size-caption-text: 12px;
+  --font-weight-caption-text: 400;
   --line-height-caption-text: 18px;
+
   --font-size-overline-text: 10px;
+  --font-weight-overline-text: 400;
   --line-height-overline-text: 14px;
 
   --font-size-button2: 14px;
+  --font-weight-button2: 500;
   --line-height-button2: 18px;
+
   --font-size-button1: 16px;
+  --font-weight-button1: 700;
   --line-height-button1: 24px;
 }
