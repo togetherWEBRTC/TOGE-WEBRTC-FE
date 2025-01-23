@@ -1,0 +1,23 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.disabled {
+  opacity: 0.4;
+}
+
+.rotate {
+  transform: rotate(180deg);
+}
+
+.sm {
+  width: 20px;
+  height: 20px;
+}
+
+.lg {
+  width: 24px;
+  height: 24px;
+}

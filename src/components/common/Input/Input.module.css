@@ -1,0 +1,54 @@
+.input {
+  width: 234px;
+  color: var(--white);
+  background-color: var(--grey-900);
+  outline: none;
+  border: none;
+}
+
+.input::placeholder {
+  color: var(--grey-500);
+}
+
+.input:disabled {
+  background-color: var(--grey-900);
+}
+
+.input:disabled::placeholder {
+  color: var(--grey-800);
+}
+
+.input:user-invalid {
+  border: 1px solid var(--crimson-500);
+}
+
+.sm {
+  height: 36px;
+  border-radius: 18px;
+  padding: 8px 12px;
+}
+
+.md {
+  height: 44px;
+  border-radius: 22px;
+  padding: 12px 16px;
+}
+
+.lg {
+  height: 56px;
+  border-radius: 28px;
+  padding: 16px 16px;
+}
+
+.sm,
+.md {
+  font-size: var(--font-size-body2);
+  font-weight: var(--font-weight-body2);
+  line-height: var(--font-size-body2);
+}
+
+.lg {
+  font-size: var(--font-size-body1);
+  font-weight: var(--font-weight-body1);
+  line-height: var(--font-size-body1);
+}

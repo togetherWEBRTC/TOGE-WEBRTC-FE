@@ -1,4 +1,8 @@
 import Button from "../../components/common/Button/Button";
+import Caption from "../../components/common/Caption/Caption";
+import Input from "../../components/common/Input/Input";
+import Label from "../../components/common/Label/Label";
+import Select from "../../components/common/Select/Select";
 import styles from "./Home.module.css";
 
 export default function Home() {
@@ -7,7 +11,7 @@ export default function Home() {
       <p>버튼테스트합시당</p>
       <div
         style={{
-          marginTop: "50px",
+          marginTop: "20px",
           width: "300px",
           display: "flex",
           gap: "10px",
@@ -61,6 +65,37 @@ export default function Home() {
         <Button style="outline" size="lg" onClick={() => console.log("클릭!")}>
           button
         </Button>
+      </div>
+      <p style={{ marginTop: "50px" }}>Input 테스트 합시당</p>
+      <div
+        style={{
+          marginTop: "20px",
+          width: "300px",
+          display: "flex",
+          gap: "10px",
+          flexDirection: "column",
+        }}
+      >
+        <Input size="sm" />
+        <Input size="md" />
+        <Input size="lg" />
+        <Input size="lg" disabled />
+        <Caption>에러 피드백</Caption>
+      </div>
+      <p style={{ marginTop: "50px" }}>Select 테스트 합시당</p>
+      <div
+        style={{
+          marginTop: "20px",
+          width: "300px",
+          display: "flex",
+          gap: "10px",
+          flexDirection: "column",
+        }}
+      >
+        <Select size="sm" options={["하나", "둘"]} />
+        <Select size="md" options={["하나", "둘"]} />
+        <Select size="lg" options={["하나", "둘"]} />
+        <Label>라벨</Label>
       </div>
     </main>
   );
