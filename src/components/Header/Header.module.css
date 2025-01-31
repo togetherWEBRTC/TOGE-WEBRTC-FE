@@ -1,34 +1,29 @@
 .header {
-  padding: 0.5rem;
+  padding: 16px 24px;
   display: flex;
   justify-content: space-between;
-  background-color: #2020202c;
-  text-align: center;
+  background-color: var(--grey-999);
+  align-items: center;
   font-weight: bold;
 }
 
-.header div {
+.logo {
+  height: 42px;
   display: flex;
+  justify-content: center;
   align-items: center;
 }
 
-.logo {
-  background-color: darkgray;
-  text-align: center;
-  width: 3rem;
-  height: 3rem;
-  margin-right: 1rem;
+.logo a {
+  height: 24px;
 }
 
-.header h3 {
-  font-size: 2rem;
+.btnBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.header button {
-  background-color: #f1f1f1;
-  margin: 0.5rem;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
+.hidden {
+  display: none;
 }

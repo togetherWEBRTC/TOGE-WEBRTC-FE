@@ -8,7 +8,7 @@ type Props = {
   style: Style;
   size: Size;
   disabled?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
 };
 
 export default function Button({
