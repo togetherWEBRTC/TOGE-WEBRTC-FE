@@ -1,0 +1,70 @@
+.container {
+  color: var(--white);
+  height: 100%;
+  display: flex;
+  background-color: var(--grey-999);
+}
+
+.videoSection {
+  width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.videoBox {
+  width: 400px;
+  height: 400px;
+  background-color: var(--grey-400);
+}
+
+.videoBox video {
+  width: 100%;
+  height: 100%;
+}
+
+.chatSection {
+  width: 25%;
+  max-width: 400px;
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--primary-100);
+}
+
+.chatList {
+  flex: 1 1 auto;
+}
+
+.inputContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100px;
+  width: 100%;
+}
+
+.inputContainer input {
+  padding-left: 10px;
+  height: 40px;
+  width: 100%;
+  outline: none;
+  border: none;
+}
+
+.inputContainer button {
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--success-100);
+  outline: none;
+  border: none;
+  cursor: pointer;
+}
+
+.inputContainer button:hover {
+  background-color: var(--success-200);
+}
