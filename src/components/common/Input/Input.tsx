@@ -5,14 +5,15 @@ type Size = "sm" | "md" | "lg";
 type Props = {
   size: Size;
   disabled?: boolean;
+  placeholder?: string;
 };
 
-export default function Input({ size, disabled = false }: Props) {
+export default function Input({ size, disabled = false, placeholder }: Props) {
   return (
     <input
       className={getClassNames(size)}
       disabled={disabled}
-      placeholder="플레이스홀더"
+      placeholder={placeholder}
       required
     />
   );
