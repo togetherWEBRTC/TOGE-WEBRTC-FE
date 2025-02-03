@@ -17,7 +17,7 @@ export default function Home() {
           <Button style="primary" size="lg">
             투게더 시작하기
           </Button>
-          <Input size="lg" placeholder="통화 코드 혹은 링크 입력" />
+          <Input scale="lg" placeholder="통화 코드 혹은 링크 입력" />
         </div>
       </div>
     </main>

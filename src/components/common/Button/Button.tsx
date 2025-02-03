@@ -3,27 +3,15 @@ import styles from "./Button.module.css";
 type Style = "primary" | "secondary" | "outline";
 type Size = "sm" | "md" | "lg";
 
-type Props = {
+type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children: React.ReactNode;
   style: Style;
   size: Size;
-  disabled?: boolean;
-  onClick?: () => void;
 };
 
-export default function Button({
-  children,
-  style,
-  size,
-  onClick,
-  disabled = false,
-}: Props) {
+export default function Button({ children, style, size, ...props }: Props) {
   return (
-    <button
-      className={getClassNames(style, size)}
-      onClick={onClick}
-      disabled={disabled}
-    >
+    <button className={getClassNames(style, size)} {...props}>
       {children}
     </button>
   );

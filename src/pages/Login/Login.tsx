@@ -2,12 +2,19 @@ import { Link, useNavigate } from "react-router";
 import styles from "./Login.module.css";
 import useSession from "../../hooks/useSession";
 import Cookies from "js-cookie";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ResCode } from "../../constants/response";
 import { LoginResponse } from "../../types/response";
+import Label from "../../components/common/Label/Label";
+import Input from "../../components/common/Input/Input";
+import Button from "../../components/common/Button/Button";
 
 export default function Login() {
   const { authUser, isFetching } = useSession();
+  const idRef = useRef<HTMLInputElement>(null);
+  const [id, setId] = useState<string>();
+  const [password, setPassword] = useState<string>();
+  const passwordRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,29 +59,46 @@ export default function Login() {
   return (
     <div className={styles.container}>
       <form className={styles.loginForm} onSubmit={handleSubmit}>
-        <h3>로그인</h3>
-        <label htmlFor="id">아이디</label>
-        <input
-          id="id"
-          name="id"
-          type="text"
-          placeholder="아이디를 입력해주세요."
-          autoComplete="off"
-          required
-        />
-        <label htmlFor="password">비밀번호</label>
-        <input
-          id="password"
-          name="password"
-          placeholder="비밀번호를 입력해주세요."
-          type="password"
-          autoComplete="off"
-          required
-        />
-        <button>로그인</button>
-        <Link to="/signup" className={styles.signup}>
-          회원가입
-        </Link>
+        <h5>투게더 로그인하기</h5>
+        <div className={styles.inputBox}>
+          <Label htmlFor="id">아이디</Label>
+          <Input
+            scale="lg"
+            inputRef={idRef}
+            id="id"
+            name="id"
+            type="text"
+            placeholder="아이디를 입력해주세요."
+            autoComplete="off"
+            required
+            onChange={(e) => {
+              setId(e.currentTarget.value);
+            }}
+          />
+        </div>
+        <div className={styles.inputBox}>
+          <Label htmlFor="password">비밀번호</Label>
+          <Input
+            scale="lg"
+            inputRef={passwordRef}
+            id="password"
+            name="password"
+            placeholder="비밀번호를 입력해주세요."
+            type="password"
+            autoComplete="off"
+            required
+            onChange={(e) => {
+              setPassword(e.currentTarget.value);
+            }}
+          />
+        </div>
+        <Button size="lg" style="primary" disabled={!id || !password}>
+          로그인
+        </Button>
+        <div className={styles.signup}>
+          <span>새로 시작하시겠어요?</span>
+          <Link to="/signup">Together 가입하기</Link>
+        </div>
       </form>
     </div>
   );

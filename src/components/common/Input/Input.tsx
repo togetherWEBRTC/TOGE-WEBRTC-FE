@@ -2,21 +2,13 @@ import styles from "./Input.module.css";
 
 type Size = "sm" | "md" | "lg";
 
-type Props = {
-  size: Size;
-  disabled?: boolean;
-  placeholder?: string;
+type Props = React.InputHTMLAttributes<HTMLInputElement> & {
+  scale: Size;
+  inputRef?: React.RefObject<HTMLInputElement>;
 };
 
-export default function Input({ size, disabled = false, placeholder }: Props) {
-  return (
-    <input
-      className={getClassNames(size)}
-      disabled={disabled}
-      placeholder={placeholder}
-      required
-    />
-  );
+export default function Input({ scale, inputRef, ...props }: Props) {
+  return <input className={getClassNames(scale)} {...props} ref={inputRef} />;
 }
 
 function getClassNames(size: Size) {

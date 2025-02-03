@@ -1,33 +1,52 @@
 .container {
-  background-color: #282828;
+  background-color: var(--grey-999);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  color: var(--white);
 }
 
 .loginForm {
-  background-color: #858585;
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  border: 1px solid #000;
-  height: 300px;
-  width: 400px;
+  align-items: center;
+  width: 328px;
+  height: 470px;
 }
 
-.loginForm h3 {
-  text-align: center;
+.loginForm h5 {
+  margin-bottom: 24px;
+}
+
+.inputBox {
+  margin-top: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .loginForm input {
-  outline: none;
-  margin: 10px 0;
-  padding: 10px;
+  width: 100%;
+}
+
+.loginForm button {
+  margin-top: 74px;
+  width: 100%;
 }
 
 .signup {
-  text-align: center;
-  text-decoration: none;
+  margin-top: 48px;
+  display: flex;
+  gap: 4px;
+}
+
+.signup span {
+  color: var(--grey-200);
+}
+
+.signup a {
+  color: var(--white);
 }
