@@ -19,7 +19,7 @@ export default function Header() {
         </Link>
       </div>
 
-      {pathname !== "/login" && (
+      {!hideBtnBox(pathname) && (
         <div className={`${styles.btnBox}`}>
           {authUser ? (
             // <img src={authUser.profileUrl} alt="profile" />
@@ -63,4 +63,9 @@ export default function Header() {
       )}
     </header>
   );
+}
+
+function hideBtnBox(pathname: string) {
+  const no_btnBox_paths = ["/login", "/signup"];
+  return no_btnBox_paths.includes(pathname);
 }

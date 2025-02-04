@@ -5,6 +5,7 @@
   outline: none;
   border: none;
   width: fit-content;
+  cursor: pointer;
 }
 
 .primary,

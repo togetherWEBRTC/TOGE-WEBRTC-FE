@@ -1,7 +1,10 @@
 .caption {
-  width: 234px;
   font-size: var(--font-size-caption-text);
   font-weight: var(--font-weight-caption-text);
   line-height: var(--line-height-caption-text);
+  color: var(--secondary-500);
+}
+
+.warning {
   color: var(--crimson-500);
 }

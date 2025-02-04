@@ -3,6 +3,7 @@ import Home from "./Home/Home";
 import DefaultLayout from "../layouts/Default";
 import Login from "./Login/Login";
 import Test from "./Test/Test";
+import Signup from "./Signup/Signup";
 
 export default function Router() {
   return (
@@ -11,6 +12,7 @@ export default function Router() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/test" element={<Test />} />
+        <Route path="/signup" element={<Signup />} />
       </Route>
     </Routes>
   );

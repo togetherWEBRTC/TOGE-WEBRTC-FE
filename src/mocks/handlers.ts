@@ -37,14 +37,21 @@ export const handlers = [
   //   );
   // }),
 
-  // 회원 가입
-  http.post("/auth/signup", () => {
-    return HttpResponse.json({
-      code: 0,
-      message: "Success",
-      accessToken: tokenValue,
-    });
+  // 아이디 중복 확인 ( 성공 )
+  http.get("/auth/check-id/:userId", () => {
+    return HttpResponse.json(ResCode.SUCCESS);
   }),
+
+  // 아이디 중복 확인 ( 실패 )
+  // http.get("/auth/check-id/:userId", () => {
+  //   return HttpResponse.json(ResCode.DUPLICATED_ID);
+  // }),
+
+  // 회원 가입 ( 성공)
+  http.post("/auth/signup", () => {
+    return HttpResponse.json(ResCode.SUCCESS);
+  }),
+
   // 토큰 갱신 ( 성공 )
   http.post("/auth/refresh/token", () => {
     return HttpResponse.json({
