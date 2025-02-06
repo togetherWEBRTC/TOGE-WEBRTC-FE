@@ -13,3 +13,7 @@ export interface LoginResponse extends BaseResponse {
   accessToken?: string;
   refreshToken?: string;
 }
+
+export interface RoomCreateResponse extends BaseResponse {
+  roomCode: string;
+}

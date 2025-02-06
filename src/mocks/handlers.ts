@@ -98,4 +98,13 @@ export const handlers = [
       message: "Success",
     });
   }),
+
+  // Room 생성을 위한 Room Code 받기
+  http.get("/room/code", () => {
+    return HttpResponse.json({
+      code: 0,
+      message: "Success",
+      roomCode: "roomcode",
+    });
+  }),
 ];

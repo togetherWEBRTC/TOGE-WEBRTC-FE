@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import styles from "./Test.module.css";
+import styles from "./Room.module.css";
 
 export default function Test() {
   const [myStream, setMyStream] = useState<MediaStream>();
@@ -37,7 +37,7 @@ export default function Test() {
   };
 
   return (
-    <div className={styles.container}>
+    <main className={styles.container}>
       <div className={styles.videoSection}>
         <div className={styles.videoBox}>
           <video ref={myVideoRef} autoPlay playsInline />
@@ -46,9 +46,9 @@ export default function Test() {
           {!myStream && <button onClick={startMedia}>화면 공유</button>}
           {myStream && <button onClick={stopMedia}>화면 공유 종료</button>}
         </div>
-        {/* <div className={styles.videoBox}>
+        <div className={styles.videoBox}>
           <video ref={peerVideoRef} autoPlay playsInline />
-        </div> */}
+        </div>
       </div>
       <div className={styles.chatSection}>
         <ul className={styles.chatList}></ul>
@@ -57,6 +57,6 @@ export default function Test() {
           <button>채 팅 입 력</button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
