@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import useSession from "../../hooks/useSession";
 import styles from "./Header.module.css";
 import Cookies from "js-cookie";
 import { BaseResponse } from "../../types/response";
 import { ResCode } from "../../constants/response";
 import Button from "../common/Button/Button";
+import { useSession } from "../../context/SessionProvider";
 
 export default function Header() {
   const { authUser } = useSession();

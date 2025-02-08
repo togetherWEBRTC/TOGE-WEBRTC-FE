@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router";
 import styles from "./Login.module.css";
-import useSession from "../../hooks/useSession";
 import Cookies from "js-cookie";
 import { useEffect, useRef, useState } from "react";
 import { ResCode } from "../../constants/response";
@@ -8,9 +7,10 @@ import { LoginResponse } from "../../types/response";
 import Label from "../../components/common/Label/Label";
 import Input from "../../components/common/Input/Input";
 import Button from "../../components/common/Button/Button";
+import { useSession } from "../../context/SessionProvider";
 
 export default function Login() {
-  const { authUser, isFetching } = useSession();
+  const { authUser, update } = useSession();
   const idRef = useRef<HTMLInputElement>(null);
   const [id, setId] = useState<string>();
   const [password, setPassword] = useState<string>();
@@ -18,12 +18,12 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isFetching && authUser) {
-      console.log("로그인 상태");
+    if (authUser) {
       navigate("/");
     }
-  }, [authUser, isFetching, navigate]);
+  }, [authUser, navigate]);
 
+  // Login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -48,6 +48,7 @@ export default function Login() {
           loginResponse.accessToken
         ) {
           Cookies.set("accessToken", loginResponse.accessToken);
+          update(loginResponse.accessToken);
           navigate("/");
         } else {
           alert("아이디 또는 비밀번호가 일치하지 않습니다.");
