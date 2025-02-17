@@ -11,7 +11,7 @@ export default function Router() {
       <Route element={<DefaultLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/room/:id" element={<Room />} />
+        <Route path="/room/:roomCode" element={<Room />} />
         <Route path="/signup" element={<Signup />} />
       </Route>
     </Routes>

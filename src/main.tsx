@@ -5,7 +5,7 @@ import "./index.css";
 import Router from "./pages/index.tsx";
 
 async function enableMocking() {
-  if (process.env.NODE_ENV !== "development") {
+  if (import.meta.env.VITE_MOKING !== "false") {
     return;
   }
 
