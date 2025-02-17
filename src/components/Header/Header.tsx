@@ -26,9 +26,12 @@ export default function Header() {
             <button
               onClick={async () => {
                 try {
-                  const res = await fetch("/auth/logout", {
-                    method: "POST",
-                  });
+                  const res = await fetch(
+                    `${import.meta.env.VITE_BASE_API_URL}/auth/logout`,
+                    {
+                      method: "POST",
+                    }
+                  );
                   if (res) {
                     res.json().then((result: BaseResponse) => {
                       if (result.code === ResCode.SUCCESS.code) {

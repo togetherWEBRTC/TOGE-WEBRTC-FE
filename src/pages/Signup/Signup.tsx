@@ -70,12 +70,19 @@ export default function Signup() {
       return;
     }
 
-    const res = await fetch(`/auth/check-id/${idRef.current.value}`).catch(
-      () => {
-        // 네트워크 요청 실패
-        alert("서버와의 연결이 원활하지 않습니다.");
+    const res = await fetch(
+      `${import.meta.env.VITE_BASE_API_URL}/auth/usable-id/${
+        idRef.current.value
+      }`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
       }
-    );
+    ).catch(() => {
+      // 네트워크 요청 실패
+      alert("서버와의 연결이 원활하지 않습니다.");
+    });
     if (res) {
       res.json().then((idCheckResponse: BaseResponse) => {
         if (idCheckResponse.code === ResCode.SUCCESS.code) {
@@ -98,13 +105,16 @@ export default function Signup() {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
-    const res = await fetch("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).catch(() => {
+    const res = await fetch(
+      `${import.meta.env.VITE_BASE_API_URL}/auth/signup`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    ).catch(() => {
       // 네트워크 요청 실패
       alert("서버와의 연결이 원활하지 않습니다.");
     });
@@ -131,8 +141,8 @@ export default function Signup() {
               <Input
                 scale="lg"
                 inputRef={idRef}
-                id="id"
-                name="id"
+                id="userId"
+                name="userId"
                 type="text"
                 placeholder="아이디를 입력해주세요."
                 autoComplete="off"

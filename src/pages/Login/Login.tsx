@@ -30,12 +30,13 @@ export default function Login() {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData);
 
-    const res = await fetch("/auth/login", {
+    const res = await fetch(`${import.meta.env.VITE_BASE_API_URL}/auth/login`, {
       method: "POST",
       body: JSON.stringify(data),
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     }).catch(() => {
       // 네트워크 요청 실패
       alert("서버와의 연결이 원활하지 않습니다.");

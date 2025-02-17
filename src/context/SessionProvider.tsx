@@ -66,10 +66,13 @@ export function useSession() {
 
       // 액세스 토큰 갱신
       const getNewAccessToken = async () => {
-        const res = await fetch("/auth/refresh/token", {
-          method: "POST",
-          credentials: "include",
-        });
+        const res = await fetch(
+          `${import.meta.env.VITE_BASE_API_URL}/auth/refresh/token`,
+          {
+            method: "POST",
+            credentials: "include",
+          }
+        );
         if (res.ok) {
           const data = await res.json();
           Cookies.set("accessToken", data.accessToken);
