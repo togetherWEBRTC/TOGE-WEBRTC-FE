@@ -1,0 +1,31 @@
+.container {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 36px;
+  background-color: var(--white);
+  animation: slideIn 0.3s ease;
+}
+
+.container .span {
+  font-size: var(--font-size-body1);
+  font-weight: var(--font-weight-body1);
+  line-height: var(--line-height-body1);
+}
+
+@keyframes slideIn {
+  from {
+    top: 8%;
+    opacity: 0;
+  }
+  to {
+    top: 10%;
+    opacity: 1;
+  }
+}
