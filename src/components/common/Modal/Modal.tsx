@@ -10,6 +10,8 @@ type Props = React.DialogHTMLAttributes<HTMLDialogElement> & {
   cancelText?: string;
   confirmHandler?: () => void;
   cancelHandler?: () => void;
+  useConfirm?: boolean;
+  useCancel?: boolean;
 };
 
 export default function Modal({
@@ -20,32 +22,38 @@ export default function Modal({
   cancelText = "취소",
   confirmHandler,
   cancelHandler,
+  useConfirm = true,
+  useCancel = true,
 }: Props) {
   return (
     <dialog className={styles.modal} ref={modalRef}>
       <h5>{title}</h5>
       <div className={styles.content}>{content}</div>
       <div className={styles.actions}>
-        <Button
-          size="lg"
-          style="secondary"
-          onClick={() => {
-            cancelHandler?.();
-            modalRef?.current?.close();
-          }}
-        >
-          {cancelText}
-        </Button>
-        <Button
-          size="lg"
-          style="primary"
-          onClick={() => {
-            confirmHandler?.();
-            modalRef?.current?.close();
-          }}
-        >
-          {confirmText}
-        </Button>
+        {useCancel && (
+          <Button
+            size="lg"
+            style="secondary"
+            onClick={() => {
+              cancelHandler?.();
+              modalRef?.current?.close();
+            }}
+          >
+            {cancelText}
+          </Button>
+        )}
+        {useConfirm && (
+          <Button
+            size="lg"
+            style="primary"
+            onClick={() => {
+              confirmHandler?.();
+              modalRef?.current?.close();
+            }}
+          >
+            {confirmText}
+          </Button>
+        )}
       </div>
     </dialog>
   );

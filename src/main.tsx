@@ -16,10 +16,10 @@ async function enableMocking() {
 
 enableMocking().then(() => {
   createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <BrowserRouter>
-        <Router />
-      </BrowserRouter>
-    </StrictMode>
+    // <StrictMode>
+    <BrowserRouter>
+      <Router />
+    </BrowserRouter>
+    // </StrictMode>
   );
 });
