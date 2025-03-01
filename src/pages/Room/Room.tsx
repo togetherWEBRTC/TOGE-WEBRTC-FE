@@ -79,7 +79,6 @@ export default function Room() {
   useEffect(() => {
     // 채팅 메세지 수신
     socket?.on("chat_notify_message", (chat: Chat) => {
-      console.log("채팅 수신 : ", chat);
       setChatList((prev) => [...prev, chat]);
     });
 
@@ -191,8 +190,6 @@ export default function Room() {
       { roomCode, message },
       (res: BaseResponse) => {
         if (res.code === ResCode.SUCCESS.code) {
-          // Test Console log
-          console.log("메시지 전송 성공 : ", res);
         }
       }
     );
@@ -203,9 +200,7 @@ export default function Room() {
     socket?.emit(
       "room_decide_join_from_host",
       { roomCode, userId, isApprove: accept },
-      (res: BaseResponse) => {
-        console.log(res);
-      }
+      (res: BaseResponse) => {}
     );
     setToastMessage("");
     setWaitingUser(undefined);

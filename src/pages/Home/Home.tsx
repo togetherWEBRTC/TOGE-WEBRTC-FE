@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import Modal from "../../components/common/Modal/Modal";
 import Portal from "../../components/common/Portal";
 import Toast from "../../components/common/Toast/Toast";
+import { useSession } from "../../context/SessionProvider";
 
 type ToastState = {
   type: "success" | "error" | "info";
@@ -18,15 +19,20 @@ type ToastState = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { authUser } = useSession();
   const socket = useSocket();
   const inputRef = useRef<HTMLInputElement>(null);
-
   const modalRef = useRef<HTMLDialogElement>(null);
 
   const [toastState, setToastState] = useState<ToastState | null>(null);
 
   const handleCreate = async () => {
     // 비로그인 시 로그인 페이지로 이동
+    if (!authUser) {
+      navigate("/login");
+      return;
+    }
+
     const res = await fetch(`${import.meta.env.VITE_BASE_API_URL}/room/code`, {
       credentials: "include",
       headers: {
@@ -38,7 +44,6 @@ export default function Home() {
     });
     if (res) {
       res.json().then((roomCreateResponse: RoomCreateResponse) => {
-        console.log("roomCode", roomCreateResponse.roomCode);
         if (roomCreateResponse.code === ResCode.SUCCESS.code) {
           if (!socket) {
             return;

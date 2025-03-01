@@ -37,10 +37,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
 export function useSession() {
   const { authUser, setAuthUser } = useContext(SessionContext);
-  console.log("authUser :", authUser);
 
   const update = (token?: string) => {
-    console.log("in update : ", token);
     if (!token) {
       setAuthUser(undefined);
       return;
