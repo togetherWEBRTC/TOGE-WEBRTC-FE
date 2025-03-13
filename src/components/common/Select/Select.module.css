@@ -7,6 +7,10 @@
   background-color: var(--grey-900);
 }
 
+.disabled {
+  pointer-events: none;
+}
+
 .sm {
   height: 36px;
   border-radius: 18px;
@@ -56,14 +60,13 @@
 .list {
   z-index: 10;
   border-radius: 18px;
-  padding: 8px 12px;
   overflow: hidden;
   position: absolute;
   width: 100%;
   top: 100%;
   left: 0;
   list-style: none;
-  background-color: white;
+  background-color: inherit;
 }
 
 .hidden {
@@ -71,6 +74,7 @@
 }
 
 .list li {
+  padding: 24px;
   display: flex;
   justify-content: left;
   align-items: center;
@@ -78,5 +82,5 @@
 }
 
 .list li:hover {
-  background-color: var(--grey-200);
+  background-color: var(--grey-800);
 }

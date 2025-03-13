@@ -5,11 +5,15 @@ import { BaseResponse } from "../../types/response";
 import { ResCode } from "../../constants/response";
 import Button from "../common/Button/Button";
 import { useSession } from "../../context/SessionProvider";
+import { useState } from "react";
+import Portal from "../common/Portal";
+import PermissionModal from "./PermissionModal/PermissionModal";
 
 export default function Header() {
   const { authUser } = useSession();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [openSetting, setOpenSetting] = useState<boolean>(false);
 
   return (
     <header className={styles.header}>
@@ -59,9 +63,22 @@ export default function Header() {
               </Button>
             </Link>
           )}
-          <Button style="outline" size="md">
+          <Button
+            style="outline"
+            size="md"
+            onClick={() => setOpenSetting(true)}
+          >
             환경설정
           </Button>
+          {openSetting && (
+            <Portal>
+              <PermissionModal
+                onClose={() => {
+                  setOpenSetting(false);
+                }}
+              />
+            </Portal>
+          )}
         </div>
       )}
     </header>

@@ -1,20 +1,7 @@
 import { createContext, useState, useEffect, useContext } from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-
-export interface AccessToken {
-  userId: string;
-  nickname: string;
-  profileUrl: string;
-  exp: number;
-  iat: number;
-}
-
-export interface AuthUser {
-  userId: string;
-  nickname: string;
-  profileUrl: string;
-}
+import { AuthUser, AccessToken } from "../types/auth";
 
 type SessionContextType = {
   authUser: AuthUser | undefined;
@@ -47,7 +34,7 @@ export function useSession() {
     const decoded: AccessToken = jwtDecode(token);
     const userData = {
       userId: decoded.userId,
-      nickname: decoded.nickname,
+      name: decoded.nickname,
       profileUrl: decoded.profileUrl,
     };
     setAuthUser(userData);
@@ -91,7 +78,7 @@ export function useSession() {
       if (!authUser) {
         const userData = {
           userId: decoded.userId,
-          nickname: decoded.nickname,
+          name: decoded.nickname,
           profileUrl: decoded.profileUrl,
         };
 

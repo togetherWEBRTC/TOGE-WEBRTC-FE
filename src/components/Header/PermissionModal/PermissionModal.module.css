@@ -1,0 +1,53 @@
+.container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--grey-800);
+  color: var(--white);
+}
+
+.content {
+  padding: 24px;
+  background-color: var(--grey-999);
+  border-radius: 24px;
+  border: 1px solid var(--grey-800);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.content h5 {
+  align-self: flex-start;
+  margin-bottom: 24px;
+}
+
+.settingList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingItem {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settingItem > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.state {
+  width: 100px;
+  text-align: center;
+}

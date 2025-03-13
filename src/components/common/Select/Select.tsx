@@ -7,15 +7,22 @@ type Size = "sm" | "md" | "lg";
 type Props = {
   size: Size;
   options: string[];
+  defaultValue?: string;
+  disabled?: boolean;
 };
 
-export default function Select({ size, options }: Props) {
+export default function Select({
+  size,
+  options,
+  defaultValue,
+  disabled = false,
+}: Props) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [value, setValue] = useState("옵션");
+  const [value, setValue] = useState(defaultValue || options[0]);
 
   return (
     <div
-      className={getClassNames(size)}
+      className={`${getClassNames(size)} ${disabled && styles.disabled}`}
       onClick={(e: MouseEvent<HTMLDivElement>) => {
         setIsOpen((prev) => !prev);
 
@@ -34,7 +41,11 @@ export default function Select({ size, options }: Props) {
           </li>
         ))}
       </ul>
-      <SelectIndicator size={size == "lg" ? "lg" : "sm"} isDown={!isOpen} />
+      <SelectIndicator
+        size={size == "lg" ? "lg" : "sm"}
+        isDown={!isOpen}
+        disabled={disabled}
+      />
     </div>
   );
 }

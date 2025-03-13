@@ -17,9 +17,10 @@
 }
 
 .videoBox {
+  position: relative;
   width: 400px;
   height: 400px;
-  background-color: var(--grey-400);
+  background-color: var(--grey-700);
 }
 
 .videoBox video {
