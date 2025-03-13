@@ -120,14 +120,15 @@ export default function Room() {
           });
 
           newPeerConnection.ontrack = (e) => {
-            console.log("ontrack", e.streams[0]);
+            // 화면 공유 종료 시 영상 제거
+            e.streams[0].onremovetrack = () => {
+              videoRefs.current[member.userId]!.srcObject = null;
+            };
             videoRefs.current[member.userId]!.srcObject = e.streams[0];
           };
 
           newPeerConnection.onicecandidate = (e) => {
-            console.log("onicecandidate in Room_Notify_Update_Participant");
             if (e.candidate) {
-              console.log("send ice", e.candidate);
               socket?.emit(
                 "signal_send_ice",
                 {
@@ -143,9 +144,6 @@ export default function Room() {
           };
 
           newPeerConnection.onnegotiationneeded = async () => {
-            console.log("onnegotiationneeded");
-            console.log("myStream(onnegotiationneeded)", myStream.current);
-
             const offer = await newPeerConnection.createOffer();
             await newPeerConnection.setLocalDescription(offer);
             socket?.emit(
@@ -155,9 +153,7 @@ export default function Room() {
                 toUserId: member.userId,
                 sdp: offer.sdp,
               },
-              (res: SocketResponse) => {
-                console.log("offer sended", res);
-              }
+              (res: SocketResponse) => {}
             );
           };
 
@@ -165,9 +161,7 @@ export default function Room() {
         });
 
         if (res.roomMemberList.length > 1) {
-          socket?.emit("rtc_ready", { roomCode }, (res: SocketResponse) => {
-            console.log("rtc_ready emited !", res);
-          });
+          socket?.emit("rtc_ready", { roomCode }, (res: SocketResponse) => {});
         }
 
         setParticipants(res.roomMemberList);
@@ -210,17 +204,17 @@ export default function Room() {
           ],
         });
         rtcRef.current[changedUser.userId] = newPeerConnection;
-        console.log("room_notify | 신규 입장 유저 : ", changedUser.userId);
 
         rtcRef.current[changedUser.userId].ontrack = (e) => {
-          console.log("ontrack", e.streams[0]);
+          // 화면 공유 종료 시 영상 제거
+          e.streams[0].onremovetrack = () => {
+            videoRefs.current[changedUser.userId]!.srcObject = null;
+          };
           videoRefs.current[changedUser.userId]!.srcObject = e.streams[0];
         };
 
         rtcRef.current[changedUser.userId].onicecandidate = (e) => {
-          console.log("onicecandidate in Room_Notify_Update_Participant");
           if (e.candidate) {
-            console.log("send ice", e.candidate);
             socket.emit(
               "signal_send_ice",
               {
@@ -236,9 +230,6 @@ export default function Room() {
         };
 
         rtcRef.current[changedUser.userId].onnegotiationneeded = async () => {
-          console.log("onnegotiationneeded");
-          console.log("myStream(onnegotiationneeded)", myStream.current);
-
           const offer = await rtcRef.current[changedUser.userId].createOffer();
           await rtcRef.current[changedUser.userId].setLocalDescription(offer);
           socket.emit(
@@ -248,9 +239,7 @@ export default function Room() {
               toUserId: changedUser.userId,
               sdp: offer.sdp,
             },
-            (res: SocketResponse) => {
-              console.log("offer sended", res);
-            }
+            (res: SocketResponse) => {}
           );
         };
 
@@ -298,7 +287,6 @@ export default function Room() {
     };
 
     const handleRtcReady = async ({ userId }: RtcReadyData) => {
-      console.log("rtc_ready from ", userId);
       if (!rtcRef.current[userId]) {
         console.log(
           "rtc_ready 인데, rtcRef.current[userId] 없어서 만들도록 하겠음 ",
@@ -318,14 +306,11 @@ export default function Room() {
           ],
         });
 
-        // myStream?.getTracks().forEach((track) => {
         myStream.current?.getTracks().forEach((track) => {
-          // rtcRef.current[userId].addTrack(track, myStream);
           rtcRef.current[userId].addTrack(track, myStream.current!);
         });
 
         rtcRef.current[userId].onicecandidate = (e) => {
-          console.log("onicecandidate in handleRtcReady");
           if (e.candidate) {
             socket.emit(
               "signal_send_ice",
@@ -342,7 +327,6 @@ export default function Room() {
         };
 
         rtcRef.current[userId].onnegotiationneeded = async () => {
-          console.log("onnegotiationneeded");
           const offer = await rtcRef.current[userId].createOffer();
           await rtcRef.current[userId].setLocalDescription(offer);
           socket.emit(
@@ -352,9 +336,7 @@ export default function Room() {
               toUserId: userId,
               sdp: offer.sdp,
             },
-            (res: SocketResponse) => {
-              console.log("offer sended", res);
-            }
+            (res: SocketResponse) => {}
           );
         };
       }
@@ -369,9 +351,7 @@ export default function Room() {
           toUserId: userId,
           sdp: offer.sdp,
         },
-        (res: SocketResponse) => {
-          console.log("offer sended", res);
-        }
+        (res: SocketResponse) => {}
       );
     };
 
@@ -381,7 +361,6 @@ export default function Room() {
       sdpMid,
       sdpMLineIndex,
     }: SignalNotifyIceData) => {
-      console.log("Singal_Nofity_Ice | from : ", fromUserId);
       rtcRef.current[fromUserId].addIceCandidate(
         new RTCIceCandidate({
           candidate,
@@ -395,7 +374,6 @@ export default function Room() {
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
-      console.log("Signal_Notify_Offer | from : ", fromUserId);
       const rtc = rtcRef.current[fromUserId];
       await rtc.setRemoteDescription({ type: "offer", sdp });
 
@@ -408,9 +386,7 @@ export default function Room() {
           toUserId: fromUserId,
           sdp: answer.sdp,
         },
-        (_: SocketResponse) => {
-          console.log("answer sended");
-        }
+        (_: SocketResponse) => {}
       );
     };
 
@@ -418,7 +394,6 @@ export default function Room() {
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
-      console.log("Signal_Notify_Answer from ", fromUserId);
       rtcRef.current[fromUserId].setRemoteDescription({
         type: "answer",
         sdp,
@@ -522,9 +497,7 @@ export default function Room() {
 
         Object.values(rtcRef.current).forEach((rtc) => {
           stream.getTracks().forEach((track) => {
-            console.log("track added", track);
             rtc.addTrack(track, myStream.current!);
-            console.log("현재 연결된 senders:", rtc.getSenders());
           });
         });
       })
@@ -534,16 +507,26 @@ export default function Room() {
   };
 
   const stopScreenShare = () => {
-    // if (!myStream) {
     if (!myStream.current) {
       return;
     }
-    // myStream.getTracks().forEach((track) => {
+
+    // 피어커넥션 트랙 제거
+    Object.values(rtcRef.current).forEach((rtc) => {
+      const sender = rtc
+        .getSenders()
+        .find((sender) => sender.track === myStream.current!.getTracks()[0]);
+      if (!sender) {
+        console.log("sender not found");
+        return;
+      }
+      rtc.removeTrack(sender);
+    });
+
+    // 로컬 스트림 중단
     myStream.current.getTracks().forEach((track) => {
-      console.log("stop track", track);
       track.stop();
     });
-    // setMyStream(undefined);
     myStream.current = undefined;
     setOnScreenShare(false);
 
