@@ -484,7 +484,9 @@ export default function Room() {
     navigator.mediaDevices
       .getDisplayMedia({
         video: {
-          displaySurface: "monitor",
+          frameRate: 15,
+          width: 1080,
+          height: 720,
         },
         audio: false,
       })
@@ -497,7 +499,14 @@ export default function Room() {
 
         Object.values(rtcRef.current).forEach((rtc) => {
           stream.getTracks().forEach((track) => {
-            rtc.addTrack(track, myStream.current!);
+            const sender = rtc.addTrack(track, myStream.current!);
+            const parameters = sender.getParameters();
+            parameters.encodings = [
+              { rid: "h", scaleResolutionDownBy: 1.0, maxBitrate: 2500000 }, // 2.5Mbps (고화질)
+              { rid: "m", scaleResolutionDownBy: 2.0, maxBitrate: 1000000 }, // 1Mbps (중화질)
+              { rid: "l", scaleResolutionDownBy: 4.0, maxBitrate: 500000 }, // 500kbps (저화질)
+            ];
+            sender.setParameters(parameters);
           });
         });
       })
