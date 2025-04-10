@@ -19,6 +19,7 @@ import {
   SignalNotifyData,
   SignalNotifyIceData,
 } from "../../types/room";
+import { useMediaState } from "../../context/MediaStateProvider";
 
 type PeerConnections = {
   [userId: string]: RTCPeerConnection;
@@ -30,7 +31,8 @@ export default function Room() {
   const { authUser } = useSession();
   const navigate = useNavigate();
 
-  // const [myStream, setMyStream] = useState<MediaStream>();
+  const { mediaState } = useMediaState();
+
   const myStream = useRef<MediaStream>();
 
   const [onScreenShare, setOnScreenShare] = useState<boolean>(false);
@@ -72,6 +74,66 @@ export default function Room() {
     }
   }, [socket, navigate]);
 
+  useEffect(() => {
+    // 미디어 장치 사용 설정 후 입장시 / 화면 공유 종료 시 / 미디어 장치 변경 시
+    if (onScreenShare) {
+      return;
+    }
+    if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
+      navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            deviceId: mediaState.camera.deviceId
+              ? { exact: mediaState.camera.deviceId }
+              : undefined,
+          },
+          audio: {
+            deviceId: mediaState.microphone.deviceId
+              ? { exact: mediaState.microphone.deviceId }
+              : undefined,
+          },
+        })
+        .then((stream) => {
+          Object.values(rtcRef.current).forEach((rtc) => {
+            if (myStream.current) {
+              // 카메라 및 마이크를 사용 중이었을 경우(stream 존재), addTrack 대신 replaceTrack 사용
+              const videoSender = rtc
+                .getSenders()
+                .find((sender) => sender.track?.kind === "video");
+
+              const audioSender = rtc
+                .getSenders()
+                .find((sender) => sender.track?.kind === "audio");
+
+              if (videoSender) {
+                videoSender.replaceTrack(stream.getVideoTracks()[0]);
+              } else {
+                const videoTrack = stream.getVideoTracks()[0];
+                rtc.addTrack(videoTrack, stream);
+              }
+
+              if (audioSender) {
+                audioSender.replaceTrack(stream.getAudioTracks()[0]);
+              } else {
+                const audioTrack = stream.getAudioTracks()[0];
+                rtc.addTrack(audioTrack, stream);
+              }
+            } else {
+              stream.getTracks().forEach((track) => {
+                rtc.addTrack(track, stream);
+              });
+            }
+          });
+
+          myStream.current = stream;
+          videoRefs.current[authUser!.userId]!.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+  }, [mediaState, authUser, onScreenShare, participants]);
+
   // Cleanup
   useEffect(() => {
     const connections = rtcRef.current;
@@ -84,9 +146,7 @@ export default function Room() {
           rtc.close();
         });
       }
-      // if (myStream) {
       if (myStream.current) {
-        // myStream.getTracks().forEach((track) => track.stop());
         myStream.current.getTracks().forEach((track) => track.stop());
       }
 
@@ -120,9 +180,18 @@ export default function Room() {
           });
 
           newPeerConnection.ontrack = (e) => {
-            // 화면 공유 종료 시 영상 제거
+            // 트랙 제거 시 ( 카메라 및 마이크 사용 중지 시 / 카메라 및 마이크 사용을 하지 않는 상태에서 화면 공유 종료 시)
             e.streams[0].onremovetrack = () => {
-              videoRefs.current[member.userId]!.srcObject = null;
+              // 남아 있는 트랙이 있는 경우( 카메라 및 마이크 중 하나를 사용하지 않도록 변경 시 ) srcObject 유지
+              const remainingTracks = e.streams[0].getTracks();
+              if (remainingTracks.length === 0) {
+                videoRefs.current[member.userId]!.srcObject = null;
+              } else {
+                console.log(
+                  `Remaining tracks for ${member.userId}:`,
+                  remainingTracks
+                );
+              }
             };
             videoRefs.current[member.userId]!.srcObject = e.streams[0];
           };
@@ -205,10 +274,22 @@ export default function Room() {
         });
         rtcRef.current[changedUser.userId] = newPeerConnection;
 
+        myStream.current?.getTracks().forEach((track) => {
+          rtcRef.current[changedUser.userId].addTrack(track, myStream.current!);
+        });
+
         rtcRef.current[changedUser.userId].ontrack = (e) => {
-          // 화면 공유 종료 시 영상 제거
           e.streams[0].onremovetrack = () => {
-            videoRefs.current[changedUser.userId]!.srcObject = null;
+            // 남아 있는 트랙이 있는 경우( 카메라 및 마이크 중 하나를 사용하지 않도록 변경 시 ) srcObject 유지
+            const remainingTracks = e.streams[0].getTracks();
+            if (remainingTracks.length === 0) {
+              videoRefs.current[changedUser.userId]!.srcObject = null;
+            } else {
+              console.log(
+                `Remaining tracks for ${changedUser.userId}:`,
+                remainingTracks
+              );
+            }
           };
           videoRefs.current[changedUser.userId]!.srcObject = e.streams[0];
         };
@@ -230,6 +311,13 @@ export default function Room() {
         };
 
         rtcRef.current[changedUser.userId].onnegotiationneeded = async () => {
+          if (rtcRef.current[changedUser.userId].signalingState === "stable") {
+            console.log(
+              "negotiationneeded",
+              rtcRef.current[changedUser.userId].signalingState
+            );
+            return;
+          }
           const offer = await rtcRef.current[changedUser.userId].createOffer();
           await rtcRef.current[changedUser.userId].setLocalDescription(offer);
           socket.emit(
@@ -488,26 +576,52 @@ export default function Room() {
           width: 1080,
           height: 720,
         },
-        audio: false,
       })
       .then((stream) => {
-        // setMyStream(stream);
         myStream.current = stream;
         setOnScreenShare(true);
 
         videoRefs.current[authUser!.userId]!.srcObject = stream;
 
         Object.values(rtcRef.current).forEach((rtc) => {
-          stream.getTracks().forEach((track) => {
-            const sender = rtc.addTrack(track, myStream.current!);
-            const parameters = sender.getParameters();
-            parameters.encodings = [
-              { rid: "h", scaleResolutionDownBy: 1.0, maxBitrate: 2500000 }, // 2.5Mbps (고화질)
-              { rid: "m", scaleResolutionDownBy: 2.0, maxBitrate: 1000000 }, // 1Mbps (중화질)
-              { rid: "l", scaleResolutionDownBy: 4.0, maxBitrate: 500000 }, // 500kbps (저화질)
-            ];
-            sender.setParameters(parameters);
-          });
+          const videoSender = rtc
+            .getSenders()
+            .find((sender) => sender.track?.kind === "video");
+
+          if (videoSender) {
+            videoSender.replaceTrack(stream.getVideoTracks()[0]);
+          } else {
+            stream.getTracks().forEach((track) => {
+              const sender = rtc.addTrack(track, myStream.current!);
+              const parameters = sender.getParameters();
+              if (parameters.encodings) {
+                parameters.encodings = parameters.encodings.map(
+                  (encoding, index) => {
+                    if (index === 0) {
+                      return {
+                        ...encoding,
+                        scaleResolutionDownBy: 1.0,
+                        maxBitrate: 2500000,
+                      }; // 고화질
+                    } else if (index === 1) {
+                      return {
+                        ...encoding,
+                        scaleResolutionDownBy: 2.0,
+                        maxBitrate: 1000000,
+                      }; // 중화질
+                    } else {
+                      return {
+                        ...encoding,
+                        scaleResolutionDownBy: 4.0,
+                        maxBitrate: 500000,
+                      }; // 저화질
+                    }
+                  }
+                );
+                sender.setParameters(parameters);
+              }
+            });
+          }
         });
       })
       .catch((err) => {
@@ -519,27 +633,40 @@ export default function Room() {
     if (!myStream.current) {
       return;
     }
+    myStream.current.getVideoTracks()[0].stop();
 
-    // 피어커넥션 트랙 제거
-    Object.values(rtcRef.current).forEach((rtc) => {
-      const sender = rtc
-        .getSenders()
-        .find((sender) => sender.track === myStream.current!.getTracks()[0]);
-      if (!sender) {
-        console.log("sender not found");
-        return;
+    if (!mediaState.camera.deviceId) {
+      // 피어커넥션 트랙 제거
+      Object.values(rtcRef.current).forEach((rtc) => {
+        const videoSender = rtc
+          .getSenders()
+          .find(
+            (sender) => sender.track === myStream.current!.getVideoTracks()[0]
+          );
+
+        if (!videoSender) {
+          console.log("videoTrack not found");
+          console.log(
+            "videoTrack not found. Available senders:",
+            rtc.getSenders().map((sender) => sender.track)
+          );
+          return;
+        }
+        rtc.removeTrack(videoSender);
+      });
+
+      // 마이크 사용 X, 카메라 사용 X 인 상태에서 화면 공유 종료 시, srcObject 초기화
+      const remainingTracks = myStream.current.getTracks();
+      if (remainingTracks.length === 0) {
+        videoRefs.current[authUser!.userId]!.srcObject = null;
       }
-      rtc.removeTrack(sender);
-    });
 
-    // 로컬 스트림 중단
-    myStream.current.getTracks().forEach((track) => {
-      track.stop();
-    });
-    myStream.current = undefined;
+      myStream.current = undefined;
+      if (!mediaState.camera.deviceId) {
+        videoRefs.current[authUser!.userId]!.srcObject = null;
+      }
+    }
     setOnScreenShare(false);
-
-    videoRefs.current[authUser!.userId]!.srcObject = null;
   };
 
   const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
