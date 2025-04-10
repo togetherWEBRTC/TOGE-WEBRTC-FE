@@ -8,6 +8,7 @@
 }
 
 .disabled {
+  color: var(--grey-500) !important;
   pointer-events: none;
 }
 
@@ -49,8 +50,11 @@
   outline: none;
   border: none;
   appearance: none;
-  color: var(--grey-500);
+  color: var(--white);
   pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .error {

@@ -3,7 +3,7 @@ import Button from "../../common/Button/Button";
 import { useMediaState } from "../../../context/MediaStateProvider";
 import Select from "../../common/Select/Select";
 import Caption from "../../common/Caption/Caption";
-import { MouseEvent, useMemo } from "react";
+import { MouseEvent, useEffect, useMemo, useState } from "react";
 
 type PermissionState = "granted" | "denied" | "prompt" | "notfound";
 
@@ -12,11 +12,22 @@ type Props = {
 };
 
 export default function PermissionModal({ onClose }: Props) {
-  const { mediaState, requestPermission } = useMediaState();
+  const { mediaState, requestPermission, selectDevice } = useMediaState();
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>();
+
+  useEffect(() => {
+    async function getDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setDevices(devices);
+    }
+    getDevices();
+  }, [mediaState]);
+
   const micPermission = useMemo(
     () => mediaState.microphone.permission,
     [mediaState.microphone.permission]
   );
+
   const camPermission = useMemo(
     () => mediaState.camera.permission,
     [mediaState.camera.permission]
@@ -40,17 +51,39 @@ export default function PermissionModal({ onClose }: Props) {
             <div>
               <Select
                 size="lg"
-                options={["옵션1", "옵션2"]}
-                defaultValue={getDefaultValue(micPermission)}
-                disabled={micPermission !== "granted"}
-              ></Select>
+                options={
+                  devices
+                    ?.filter((device) => device.kind === "audioinput")
+                    .map((device) => device.label) || []
+                }
+                ids={
+                  devices
+                    ?.filter((device) => device.kind === "audioinput")
+                    .map((device) => device.deviceId) || []
+                }
+                defaultValue={
+                  micPermission !== "granted"
+                    ? getStateMessage(micPermission)
+                    : mediaState.microphone.deviceLabel ?? "장치 선택"
+                }
+                handleSelect={(id: string, option: string) => {
+                  selectDevice("microphone", id, option);
+                }}
+                disabled={micPermission !== "granted" || devices?.length === 0}
+              />
               <Button
                 size="md"
-                style={micPermission === "granted" ? "outline" : "primary"}
+                style={
+                  micPermission === "granted" || micPermission === "denied"
+                    ? "outline"
+                    : "primary"
+                }
                 onClick={() => {
                   requestPermission("microphone");
                 }}
-                disabled={micPermission === "granted"}
+                disabled={
+                  micPermission === "granted" || micPermission === "denied"
+                }
               >
                 {getPermissionState(micPermission, "마이크")}
               </Button>
@@ -61,17 +94,39 @@ export default function PermissionModal({ onClose }: Props) {
             <div>
               <Select
                 size="lg"
-                options={["옵션1", "옵션2"]}
-                defaultValue={getDefaultValue(camPermission)}
-                disabled={camPermission !== "granted"}
-              ></Select>
+                options={
+                  devices
+                    ?.filter((device) => device.kind === "videoinput")
+                    .map((device) => device.label) || []
+                }
+                ids={
+                  devices
+                    ?.filter((device) => device.kind === "videoinput")
+                    .map((device) => device.deviceId) || []
+                }
+                defaultValue={
+                  camPermission !== "granted"
+                    ? getStateMessage(camPermission)
+                    : mediaState.camera.deviceLabel ?? "장치 선택"
+                }
+                handleSelect={(id: string, option: string) => {
+                  selectDevice("camera", id, option);
+                }}
+                disabled={camPermission !== "granted" || devices?.length === 0}
+              />
               <Button
                 size="md"
-                style={camPermission === "granted" ? "outline" : "primary"}
+                style={
+                  camPermission === "granted" || camPermission === "denied"
+                    ? "outline"
+                    : "primary"
+                }
                 onClick={() => {
                   requestPermission("camera");
                 }}
-                disabled={camPermission === "granted"}
+                disabled={
+                  camPermission === "granted" || camPermission === "denied"
+                }
               >
                 {getPermissionState(camPermission, "카메라")}
               </Button>
@@ -88,6 +143,7 @@ function getPermissionState(permission: PermissionState, mediaType?: string) {
     case "granted":
       return "허용됨";
     case "denied":
+      return "거부됨";
     case "prompt":
       return `${mediaType} 허용`;
     default:
@@ -95,7 +151,7 @@ function getPermissionState(permission: PermissionState, mediaType?: string) {
   }
 }
 
-function getDefaultValue(permission: PermissionState) {
+function getStateMessage(permission: PermissionState) {
   switch (permission) {
     case "granted":
       return undefined;

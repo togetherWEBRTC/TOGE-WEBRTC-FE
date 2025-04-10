@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type MediaInfo = {
   permission: PermissionState | "notfound";
+  deviceId?: string;
+  deviceLabel?: string;
 };
 
 type MediaState = {
@@ -18,12 +20,15 @@ type MediaStateContext = {
 const initialMediaState: MediaState = {
   microphone: {
     permission: "prompt",
+    deviceId: undefined,
   },
   camera: {
     permission: "prompt",
+    deviceId: undefined,
   },
   displayCapture: {
     permission: "prompt",
+    deviceId: undefined,
   },
 };
 
@@ -41,6 +46,7 @@ export default function MediaStateProvider({
 }: {
   children: React.ReactNode;
 }) {
+  // mediaState: 현재 미디어 권한 상태, 현재 사용 장치 정보
   const [mediaState, setMediaState] = useState<MediaState>(initialMediaState);
   useEffect(() => {
     async function getPermissions() {
@@ -56,9 +62,12 @@ export default function MediaStateProvider({
         });
 
         setMediaState({
-          microphone: { permission: micPermission.state },
-          camera: { permission: camPermission.state },
-          displayCapture: { permission: displayCapturePermission.state },
+          microphone: { permission: micPermission.state, deviceId: undefined },
+          camera: { permission: camPermission.state, deviceId: undefined },
+          displayCapture: {
+            permission: displayCapturePermission.state,
+            deviceId: undefined,
+          },
         });
 
         micPermission.onchange = () =>
@@ -154,5 +163,34 @@ export const useMediaState = () => {
     }
   };
 
-  return { mediaState, requestPermission };
+  const selectDevice = (
+    deviceType: "microphone" | "camera" | "displayCapture",
+    deviceId: string,
+    deviceLabel: string
+  ) => {
+    switch (deviceType) {
+      case "camera":
+        setMediaState((prev) => ({
+          ...prev,
+          camera: { permission: "granted", deviceId, deviceLabel },
+        }));
+        break;
+      case "microphone":
+        setMediaState((prev) => ({
+          ...prev,
+          microphone: { permission: "granted", deviceId, deviceLabel },
+        }));
+        break;
+      case "displayCapture":
+        setMediaState((prev) => ({
+          ...prev,
+          displayCapture: { permission: "granted", deviceId, deviceLabel },
+        }));
+        break;
+      default:
+        throw new Error("지원하지 않는 미디어 타입입니다.");
+    }
+  };
+
+  return { mediaState, requestPermission, selectDevice };
 };
