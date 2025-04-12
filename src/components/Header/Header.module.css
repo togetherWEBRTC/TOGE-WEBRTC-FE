@@ -18,6 +18,27 @@
   height: 24px;
 }
 
+.userInfo {
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 16px;
+}
+
+.avatar {
+  height: 24px;
+  width: 24px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.userName {
+  font-size: var(--font-size-body1);
+  font-weight: var(--font-weight-body1);
+  line-height: var(--line-height-body1);
+}
+
 .btnBox {
   display: flex;
   align-items: center;

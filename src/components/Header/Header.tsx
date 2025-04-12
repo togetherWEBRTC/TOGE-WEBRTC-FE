@@ -25,9 +25,22 @@ export default function Header() {
 
       {!hideBtnBox(pathname) && (
         <div className={`${styles.btnBox}`}>
+          {authUser && (
+            <div className={styles.userInfo}>
+              <Link to="/mypage">
+                <img
+                  src={`http://localhost:3000/${authUser.profileUrl}`}
+                  alt="avatar"
+                  className={styles.avatar}
+                />
+              </Link>
+              <span className={styles.userName}>{authUser.name} 님</span>
+            </div>
+          )}
           {authUser ? (
-            // <img src={authUser.profileUrl} alt="profile" />
-            <button
+            <Button
+              style={"secondary"}
+              size={"md"}
               onClick={async () => {
                 try {
                   const res = await fetch(
@@ -55,7 +68,7 @@ export default function Header() {
               }}
             >
               로그아웃
-            </button>
+            </Button>
           ) : (
             <Link to="/login">
               <Button style="secondary" size="md">
