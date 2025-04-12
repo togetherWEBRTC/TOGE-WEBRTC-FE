@@ -80,19 +80,25 @@ export default function Room() {
       return;
     }
     if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
+      const constraints: MediaStreamConstraints = {
+        video: false,
+        audio: false,
+      };
+
+      if (mediaState.camera.deviceId) {
+        constraints.video = {
+          deviceId: { exact: mediaState.camera.deviceId },
+        };
+      }
+
+      if (mediaState.microphone.deviceId) {
+        constraints.audio = {
+          deviceId: { exact: mediaState.microphone.deviceId },
+        };
+      }
+
       navigator.mediaDevices
-        .getUserMedia({
-          video: {
-            deviceId: mediaState.camera.deviceId
-              ? { exact: mediaState.camera.deviceId }
-              : undefined,
-          },
-          audio: {
-            deviceId: mediaState.microphone.deviceId
-              ? { exact: mediaState.microphone.deviceId }
-              : undefined,
-          },
-        })
+        .getUserMedia(constraints)
         .then((stream) => {
           Object.values(rtcRef.current).forEach((rtc) => {
             if (myStream.current) {
