@@ -29,7 +29,9 @@ export default function Header() {
             <div className={styles.userInfo}>
               <Link to="/mypage">
                 <img
-                  src={`http://localhost:3000/${authUser.profileUrl}`}
+                  src={`${import.meta.env.VITE_BASE_RESOURCE_URL}/${
+                    authUser.profileUrl
+                  }`}
                   alt="avatar"
                   className={styles.avatar}
                 />
