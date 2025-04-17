@@ -161,14 +161,15 @@ export default function Home() {
       </div>
       <Modal
         title="방 참여 대기"
-        content="방 참여를 요청하였습니다. 호스트의 수락을 기다려주세요."
         modalRef={modalRef}
         useConfirm={false}
         cancelHandler={() => {
           socket?.emit("room_request_join_cancel");
           modalRef.current?.close();
         }}
-      />
+      >
+        "방 참여를 요청하였습니다. 호스트의 수락을 기다려주세요."
+      </Modal>
       {toastState && (
         <Portal>
           <Toast

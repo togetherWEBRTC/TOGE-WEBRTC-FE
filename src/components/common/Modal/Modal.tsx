@@ -5,30 +5,30 @@ import styles from "./Modal.module.css";
 type Props = React.DialogHTMLAttributes<HTMLDialogElement> & {
   modalRef?: React.RefObject<HTMLDialogElement>;
   title: string;
-  content: string;
   confirmText?: string;
   cancelText?: string;
   confirmHandler?: () => void;
   cancelHandler?: () => void;
   useConfirm?: boolean;
   useCancel?: boolean;
+  children: React.ReactNode;
 };
 
 export default function Modal({
   modalRef,
   title,
-  content,
   confirmText = "확인",
   cancelText = "취소",
   confirmHandler,
   cancelHandler,
   useConfirm = true,
   useCancel = true,
+  children,
 }: Props) {
   return (
     <dialog className={styles.modal} ref={modalRef}>
       <h5>{title}</h5>
-      <div className={styles.content}>{content}</div>
+      <div className={styles.content}>{children}</div>
       <div className={styles.actions}>
         {useCancel && (
           <Button

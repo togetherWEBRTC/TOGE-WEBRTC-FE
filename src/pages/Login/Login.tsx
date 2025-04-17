@@ -10,7 +10,7 @@ import Button from "../../components/common/Button/Button";
 import { useSession } from "../../context/SessionProvider";
 
 export default function Login() {
-  const { authUser, update } = useSession();
+  const { authUser, updateUserByToken } = useSession();
   const idRef = useRef<HTMLInputElement>(null);
   const [id, setId] = useState<string>();
   const [password, setPassword] = useState<string>();
@@ -49,7 +49,7 @@ export default function Login() {
           loginResponse.accessToken
         ) {
           Cookies.set("accessToken", loginResponse.accessToken);
-          update(loginResponse.accessToken);
+          updateUserByToken(loginResponse.accessToken);
           navigate("/");
         } else {
           alert("아이디 또는 비밀번호가 일치하지 않습니다.");
