@@ -10,9 +10,14 @@ export interface BaseResponse {
 }
 
 export interface LoginResponse extends BaseResponse {
-  userInfo?: IauthUser;
-  accessToken?: string;
+  userInfo: IauthUser;
+  accessToken: string;
   refreshToken?: string;
+}
+
+export interface ProfileChangeResponse extends BaseResponse {
+  userInfo: IauthUser;
+  accessToken: string;
 }
 
 export interface RoomCreateResponse extends BaseResponse {
