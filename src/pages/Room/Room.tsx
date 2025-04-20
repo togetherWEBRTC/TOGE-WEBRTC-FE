@@ -38,6 +38,9 @@ export default function Room() {
   const [onScreenShare, setOnScreenShare] = useState<boolean>(false);
 
   const videoRefs = useRef<{ [userId: string]: HTMLVideoElement | null }>({});
+  const [isVideoPlaying, setIsVideoPlaying] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -53,9 +56,24 @@ export default function Room() {
 
   const setVideoRef = useCallback(
     (userId: string) => (node: HTMLVideoElement | null) => {
+      // 비디오 재생 상태 확인을 통한 대체 이미지 표시를 위한 코드
+      const handlePlay = () =>
+        setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
+      const handlePause = () =>
+        setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
+      const handleEnded = () =>
+        setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
+
       if (node) {
         videoRefs.current[userId] = node;
+
+        videoRefs.current[userId].addEventListener("play", handlePlay);
+        videoRefs.current[userId].addEventListener("pause", handlePause);
+        videoRefs.current[userId].addEventListener("ended", handleEnded);
       } else {
+        videoRefs.current[userId]?.removeEventListener("play", handlePlay);
+        videoRefs.current[userId]?.removeEventListener("pause", handlePause);
+        videoRefs.current[userId]?.removeEventListener("ended", handleEnded);
         delete videoRefs.current[userId];
       }
     },
@@ -710,6 +728,14 @@ export default function Room() {
       <div className={styles.videoSection}>
         {participants.map((participant) => (
           <div className={styles.videoBox} key={participant.userId}>
+            {!isVideoPlaying[participant.userId] && (
+              <img
+                className={styles.avatar}
+                src={`${import.meta.env.VITE_BASE_RESOURCE_URL}/${
+                  participant.profileUrl
+                }`}
+              />
+            )}
             <video ref={setVideoRef(participant.userId)} autoPlay playsInline />
             <Label
               style={{
