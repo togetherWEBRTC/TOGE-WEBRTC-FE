@@ -149,11 +149,7 @@ export default function Home() {
           <Button style="primary" size="lg" onClick={handleCreate}>
             투게더 시작하기
           </Button>
-          <Input
-            scale="lg"
-            placeholder="통화 코드 혹은 링크 입력"
-            inputRef={inputRef}
-          />
+          <Input scale="lg" placeholder="통화 코드 입력" inputRef={inputRef} />
           <Button style="primary" size="lg" onClick={handleJoin}>
             방 입장
           </Button>
