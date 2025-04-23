@@ -360,10 +360,7 @@ export default function Room() {
 
         rtcRef.current[changedUser.userId].onnegotiationneeded = async () => {
           if (rtcRef.current[changedUser.userId].signalingState === "stable") {
-            console.log(
-              "negotiationneeded",
-              rtcRef.current[changedUser.userId].signalingState
-            );
+            // 이미 협상이 진행 중인 경우, 중복으로 offer를 생성하지 않도록 함
             return;
           }
           const offer = await rtcRef.current[changedUser.userId].createOffer();
@@ -620,9 +617,9 @@ export default function Room() {
     navigator.mediaDevices
       .getDisplayMedia({
         video: {
-          frameRate: 15,
-          width: 1080,
-          height: 720,
+          frameRate: { ideal: 60 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         },
       })
       .then((stream) => {
@@ -685,6 +682,7 @@ export default function Room() {
 
     if (!mediaState.camera.deviceId) {
       // 피어커넥션 트랙 제거
+      setIsVideoPlaying((prev) => ({ ...prev, [authUser!.userId]: false }));
       Object.values(rtcRef.current).forEach((rtc) => {
         const videoSender = rtc
           .getSenders()
