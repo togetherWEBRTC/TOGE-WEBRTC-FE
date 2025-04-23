@@ -20,6 +20,13 @@ import {
   SignalNotifyIceData,
 } from "../../types/room";
 import { useMediaState } from "../../context/MediaStateProvider";
+import {
+  BsCameraVideo,
+  BsCameraVideoOff,
+  BsMic,
+  BsMicMute,
+  BsLink45Deg,
+} from "react-icons/bs";
 
 type PeerConnections = {
   [userId: string]: RTCPeerConnection;
@@ -34,6 +41,9 @@ export default function Room() {
   const { mediaState } = useMediaState();
 
   const myStream = useRef<MediaStream>();
+
+  const [mute, setMute] = useState<boolean>(false);
+  const [videoOff, setVideoOff] = useState<boolean>(false);
 
   const [onScreenShare, setOnScreenShare] = useState<boolean>(false);
 
@@ -79,6 +89,20 @@ export default function Room() {
     },
     []
   );
+
+  const toggleMute = () => {
+    myStream.current
+      ?.getAudioTracks()
+      .forEach((track) => (track.enabled = !track.enabled));
+    setMute((prev) => !prev);
+  };
+
+  const toggleVideo = () => {
+    myStream.current
+      ?.getVideoTracks()
+      .forEach((track) => (track.enabled = !track.enabled));
+    setVideoOff((prev) => !prev);
+  };
 
   useEffect(() => {
     if (!authUser) {
@@ -751,6 +775,12 @@ export default function Room() {
         ))}
 
         <div className={styles.actionBar}>
+          <button className={styles.iconContainer} onClick={toggleVideo}>
+            {videoOff ? <BsCameraVideoOff /> : <BsCameraVideo />}
+          </button>
+          <button className={styles.iconContainer} onClick={toggleMute}>
+            {mute ? <BsMicMute /> : <BsMic />}
+          </button>
           <Button style="primary" size="sm" onClick={quitRoom}>
             통화 종료
           </Button>
@@ -768,6 +798,9 @@ export default function Room() {
           >
             채팅
           </Button>
+          <button className={styles.link}>
+            <BsLink45Deg />
+          </button>
         </div>
       </div>
       {onChat && (

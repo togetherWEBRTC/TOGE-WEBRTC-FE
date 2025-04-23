@@ -52,6 +52,45 @@
   background-color: var(--grey-999);
 }
 
+.iconContainer {
+  padding: 0px 20px;
+  border-radius: 17px;
+  border: 1px solid var(--grey-200);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 34px;
+  font-size: 24px;
+  color: var(--white);
+  background-color: transparent;
+}
+
+.iconContainer:disabled {
+  pointer-events: none;
+  border: 1px solid var(--grey-500);
+  color: var(--grey-500);
+}
+
+.iconContainer:hover {
+  opacity: 0.8;
+}
+
+.link {
+  font-size: 24px;
+  background-color: transparent;
+  width: 40px;
+  height: 34px;
+  color: var(--white);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+
 .chatSection {
   width: 25%;
   max-width: 400px;
@@ -66,6 +105,7 @@
   color: black;
   list-style: none;
   padding: 10px;
+  outline: none;
 }
 
 .inputContainer {
