@@ -85,10 +85,12 @@
   justify-content: center;
   align-items: center;
   border: none;
+  transition: all 0.1s ease-in;
 }
 
 .link:hover {
-  opacity: 0.8;
+  font-size: 30px;
+  color: var(--primary-200);
 }
 
 .chatSection {

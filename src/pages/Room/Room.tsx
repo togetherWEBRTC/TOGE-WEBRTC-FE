@@ -37,6 +37,7 @@ export default function Room() {
   const { roomCode } = useParams();
   const { authUser } = useSession();
   const navigate = useNavigate();
+  const params = useParams();
 
   const { mediaState } = useMediaState();
 
@@ -102,6 +103,14 @@ export default function Room() {
       ?.getVideoTracks()
       .forEach((track) => (track.enabled = !track.enabled));
     setVideoOff((prev) => !prev);
+  };
+
+  const handleCopy = () => {
+    if (!params.roomCode) return;
+
+    navigator.clipboard.writeText(params.roomCode).then(() => {
+      alert("링크가 복사되었습니다.");
+    });
   };
 
   useEffect(() => {
@@ -796,7 +805,7 @@ export default function Room() {
           >
             채팅
           </Button>
-          <button className={styles.link}>
+          <button className={styles.link} onClick={handleCopy}>
             <BsLink45Deg />
           </button>
         </div>
