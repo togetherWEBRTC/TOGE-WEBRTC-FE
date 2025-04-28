@@ -49,6 +49,7 @@ export default function Header() {
                     `${import.meta.env.VITE_BASE_API_URL}/auth/logout`,
                     {
                       method: "POST",
+                      credentials: "include",
                     }
                   );
                   if (res) {
