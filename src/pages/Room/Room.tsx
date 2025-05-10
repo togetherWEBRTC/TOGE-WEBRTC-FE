@@ -164,16 +164,10 @@ export default function Room() {
 
               if (videoSender) {
                 videoSender.replaceTrack(stream.getVideoTracks()[0]);
-              } else {
-                const videoTrack = stream.getVideoTracks()[0];
-                rtc.addTrack(videoTrack, stream);
               }
 
               if (audioSender) {
                 audioSender.replaceTrack(stream.getAudioTracks()[0]);
-              } else {
-                const audioTrack = stream.getAudioTracks()[0];
-                rtc.addTrack(audioTrack, stream);
               }
             } else {
               stream.getTracks().forEach((track) => {
@@ -242,6 +236,10 @@ export default function Room() {
               // 남아 있는 트랙이 있는 경우( 카메라 및 마이크 중 하나를 사용하지 않도록 변경 시 ) srcObject 유지
               const remainingTracks = e.streams[0].getTracks();
               if (remainingTracks.length === 0) {
+                setIsVideoPlaying((prev) => ({
+                  ...prev,
+                  [member.userId]: false,
+                }));
                 videoRefs.current[member.userId]!.srcObject = null;
               } else {
                 console.log(
@@ -368,10 +366,12 @@ export default function Room() {
         };
 
         rtcRef.current[changedUser.userId].onnegotiationneeded = async () => {
-          if (rtcRef.current[changedUser.userId].signalingState === "stable") {
-            // 이미 협상이 진행 중인 경우, 중복으로 offer를 생성하지 않도록 함
-            return;
-          }
+          console.log("Negotiation needed for user:", changedUser.userId); // Debugging log
+          // if (rtcRef.current[changedUser.userId].signalingState === "stable") {
+          //   // 이미 협상이 진행 중인 경우, 중복으로 offer를 생성하지 않도록 함
+          //   console.log("Negotiation already in progress, skipping offer."); // Debugging log
+          //   return;
+          // }
           const offer = await rtcRef.current[changedUser.userId].createOffer();
           await rtcRef.current[changedUser.userId].setLocalDescription(offer);
           socket.emit(
@@ -517,29 +517,38 @@ export default function Room() {
       sdp,
     }: SignalNotifyData) => {
       const rtc = rtcRef.current[fromUserId];
-      await rtc.setRemoteDescription({ type: "offer", sdp });
 
-      const answer = await rtc.createAnswer();
-      await rtc.setLocalDescription(answer);
-      socket.emit(
-        "signal_send_answer",
-        {
-          roomCode,
-          toUserId: fromUserId,
-          sdp: answer.sdp,
-        },
-        (_: SocketResponse) => {}
-      );
+      try {
+        await rtc.setRemoteDescription({ type: "offer", sdp });
+
+        const answer = await rtc.createAnswer();
+        await rtc.setLocalDescription(answer);
+        socket.emit(
+          "signal_send_answer",
+          {
+            roomCode,
+            toUserId: fromUserId,
+            sdp: answer.sdp,
+          },
+          (_: SocketResponse) => {}
+        );
+      } catch (error) {
+        console.error("Error handling offer:", error);
+      }
     };
 
     const handleSignalNotifyAnswer = ({
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
-      rtcRef.current[fromUserId].setRemoteDescription({
-        type: "answer",
-        sdp,
-      });
+      rtcRef.current[fromUserId]
+        .setRemoteDescription({
+          type: "answer",
+          sdp,
+        })
+        .catch((error) => {
+          console.error("Error setting remote description:", error);
+        });
     };
 
     const handleRoomNotifyUpdateOwner = () => {
@@ -687,6 +696,7 @@ export default function Room() {
     if (!myStream.current) {
       return;
     }
+
     myStream.current.getVideoTracks()[0].stop();
 
     if (!mediaState.camera.deviceId) {
