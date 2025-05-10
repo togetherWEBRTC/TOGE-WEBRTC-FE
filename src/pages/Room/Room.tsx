@@ -208,6 +208,72 @@ export default function Room() {
     };
   }, [socket]);
 
+  const createPeerConnectionByUserId = (userId: string) => {
+    const newPeerConnection = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: [
+            "stun:stun.l.google.com:19302",
+            "stun:stun1.l.google.com:19302",
+            "stun:stun2.l.google.com:19302",
+            "stun:stun3.l.google.com:19302",
+            "stun:stun4.l.google.com:19302",
+          ],
+        },
+      ],
+    });
+
+    newPeerConnection.ontrack = (e) => {
+      // 트랙 제거 시 ( 카메라를 사용하지 않는 상태에서 화면 공유 종료 시, 비디오 트랙 제거 )
+      e.streams[0].onremovetrack = () => {
+        // 남아 있는 트랙이 없는 경우( 마이크 사용 X ) srcObject 초기화
+        const remainingTracks = e.streams[0].getTracks();
+        if (remainingTracks.length === 0) {
+          setIsVideoPlaying((prev) => ({
+            ...prev,
+            [userId]: false,
+          }));
+          videoRefs.current[userId]!.srcObject = null;
+        } else {
+          console.log(`Remaining tracks for ${userId}:`, remainingTracks);
+        }
+      };
+      videoRefs.current[userId]!.srcObject = e.streams[0];
+    };
+
+    newPeerConnection.onicecandidate = (e) => {
+      if (e.candidate) {
+        socket?.emit(
+          "signal_send_ice",
+          {
+            roomCode,
+            toUserId: userId,
+            candidate: e.candidate.candidate,
+            sdpMid: e.candidate.sdpMid,
+            sdpMLineIndex: e.candidate.sdpMLineIndex,
+          },
+          (_: SocketResponse) => {}
+        );
+      }
+    };
+
+    newPeerConnection.onnegotiationneeded = async () => {
+      const offer = await newPeerConnection.createOffer();
+      await newPeerConnection.setLocalDescription(offer);
+      socket?.emit(
+        "signal_send_offer",
+        {
+          roomCode,
+          toUserId: userId,
+          sdp: offer.sdp,
+        },
+        (res: SocketResponse) => {}
+      );
+    };
+
+    return newPeerConnection;
+  };
+
   // 방 입장 시, 방 참가자 목록 요청 및 PeerConnection 생성
   useEffect(() => {
     const handleRoomMemberList = (res: RoomMemberListResponse) => {
@@ -216,72 +282,11 @@ export default function Room() {
           if (member.userId === authUser?.userId) {
             return;
           }
-          const newPeerConnection = new RTCPeerConnection({
-            iceServers: [
-              {
-                urls: [
-                  "stun:stun.l.google.com:19302",
-                  "stun:stun1.l.google.com:19302",
-                  "stun:stun2.l.google.com:19302",
-                  "stun:stun3.l.google.com:19302",
-                  "stun:stun4.l.google.com:19302",
-                ],
-              },
-            ],
-          });
 
-          newPeerConnection.ontrack = (e) => {
-            // 트랙 제거 시 ( 카메라 및 마이크 사용 중지 시 / 카메라 및 마이크 사용을 하지 않는 상태에서 화면 공유 종료 시)
-            e.streams[0].onremovetrack = () => {
-              // 남아 있는 트랙이 있는 경우( 카메라 및 마이크 중 하나를 사용하지 않도록 변경 시 ) srcObject 유지
-              const remainingTracks = e.streams[0].getTracks();
-              if (remainingTracks.length === 0) {
-                setIsVideoPlaying((prev) => ({
-                  ...prev,
-                  [member.userId]: false,
-                }));
-                videoRefs.current[member.userId]!.srcObject = null;
-              } else {
-                console.log(
-                  `Remaining tracks for ${member.userId}:`,
-                  remainingTracks
-                );
-              }
-            };
-            videoRefs.current[member.userId]!.srcObject = e.streams[0];
-          };
-
-          newPeerConnection.onicecandidate = (e) => {
-            if (e.candidate) {
-              socket?.emit(
-                "signal_send_ice",
-                {
-                  roomCode,
-                  toUserId: member.userId,
-                  candidate: e.candidate.candidate,
-                  sdpMid: e.candidate.sdpMid,
-                  sdpMLineIndex: e.candidate.sdpMLineIndex,
-                },
-                (_: SocketResponse) => {}
-              );
-            }
-          };
-
-          newPeerConnection.onnegotiationneeded = async () => {
-            const offer = await newPeerConnection.createOffer();
-            await newPeerConnection.setLocalDescription(offer);
-            socket?.emit(
-              "signal_send_offer",
-              {
-                roomCode,
-                toUserId: member.userId,
-                sdp: offer.sdp,
-              },
-              (res: SocketResponse) => {}
-            );
-          };
-
-          rtcRef.current[member.userId] = newPeerConnection;
+          // 참가자 목록 유저에 대한 PeerConnection 생성
+          rtcRef.current[member.userId] = createPeerConnectionByUserId(
+            member.userId
+          );
         });
 
         if (res.roomMemberList.length > 1) {
@@ -314,76 +319,13 @@ export default function Room() {
       if (isJoined) {
         // 유저 입장 시
         // PeerConnection 생성
-        const newPeerConnection = new RTCPeerConnection({
-          iceServers: [
-            {
-              urls: [
-                "stun:stun.l.google.com:19302",
-                "stun:stun1.l.google.com:19302",
-                "stun:stun2.l.google.com:19302",
-                "stun:stun3.l.google.com:19302",
-                "stun:stun4.l.google.com:19302",
-              ],
-            },
-          ],
-        });
-        rtcRef.current[changedUser.userId] = newPeerConnection;
+        rtcRef.current[changedUser.userId] = createPeerConnectionByUserId(
+          changedUser.userId
+        );
 
         myStream.current?.getTracks().forEach((track) => {
           rtcRef.current[changedUser.userId].addTrack(track, myStream.current!);
         });
-
-        rtcRef.current[changedUser.userId].ontrack = (e) => {
-          e.streams[0].onremovetrack = () => {
-            // 남아 있는 트랙이 있는 경우( 카메라 및 마이크 중 하나를 사용하지 않도록 변경 시 ) srcObject 유지
-            const remainingTracks = e.streams[0].getTracks();
-            if (remainingTracks.length === 0) {
-              videoRefs.current[changedUser.userId]!.srcObject = null;
-            } else {
-              console.log(
-                `Remaining tracks for ${changedUser.userId}:`,
-                remainingTracks
-              );
-            }
-          };
-          videoRefs.current[changedUser.userId]!.srcObject = e.streams[0];
-        };
-
-        rtcRef.current[changedUser.userId].onicecandidate = (e) => {
-          if (e.candidate) {
-            socket.emit(
-              "signal_send_ice",
-              {
-                roomCode,
-                toUserId: changedUser.userId,
-                candidate: e.candidate.candidate,
-                sdpMid: e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex,
-              },
-              (_: SocketResponse) => {}
-            );
-          }
-        };
-
-        rtcRef.current[changedUser.userId].onnegotiationneeded = async () => {
-          console.log("Negotiation needed for user:", changedUser.userId); // Debugging log
-          // if (rtcRef.current[changedUser.userId].signalingState === "stable") {
-          //   // 이미 협상이 진행 중인 경우, 중복으로 offer를 생성하지 않도록 함
-          //   console.log("Negotiation already in progress, skipping offer."); // Debugging log
-          //   return;
-          // }
-          const offer = await rtcRef.current[changedUser.userId].createOffer();
-          await rtcRef.current[changedUser.userId].setLocalDescription(offer);
-          socket.emit(
-            "signal_send_offer",
-            {
-              roomCode,
-              toUserId: changedUser.userId,
-              sdp: offer.sdp,
-            },
-            (res: SocketResponse) => {}
-          );
-        };
 
         const systemMessage: Chat = {
           name: "system_message",
