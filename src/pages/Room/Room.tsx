@@ -220,6 +220,11 @@ export default function Room() {
             "stun:stun4.l.google.com:19302",
           ],
         },
+        {
+          urls: import.meta.env.VITE_TURN_SERVER_URL,
+          username: import.meta.env.VITE_TURN_SERVER_USERNAME,
+          credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL,
+        },
       ],
     });
 
@@ -376,53 +381,12 @@ export default function Room() {
           "rtc_ready 인데, rtcRef.current[userId] 없어서 만들도록 하겠음 ",
           userId
         );
-        rtcRef.current[userId] = new RTCPeerConnection({
-          iceServers: [
-            {
-              urls: [
-                "stun:stun.l.google.com:19302",
-                "stun:stun1.l.google.com:19302",
-                "stun:stun2.l.google.com:19302",
-                "stun:stun3.l.google.com:19302",
-                "stun:stun4.l.google.com:19302",
-              ],
-            },
-          ],
-        });
+
+        rtcRef.current[userId] = createPeerConnectionByUserId(userId);
 
         myStream.current?.getTracks().forEach((track) => {
           rtcRef.current[userId].addTrack(track, myStream.current!);
         });
-
-        rtcRef.current[userId].onicecandidate = (e) => {
-          if (e.candidate) {
-            socket.emit(
-              "signal_send_ice",
-              {
-                roomCode,
-                toUserId: userId,
-                candidate: e.candidate.candidate,
-                sdpMid: e.candidate.sdpMid,
-                sdpMLineIndex: e.candidate.sdpMLineIndex,
-              },
-              (_: SocketResponse) => {}
-            );
-          }
-        };
-
-        rtcRef.current[userId].onnegotiationneeded = async () => {
-          const offer = await rtcRef.current[userId].createOffer();
-          await rtcRef.current[userId].setLocalDescription(offer);
-          socket.emit(
-            "signal_send_offer",
-            {
-              roomCode,
-              toUserId: userId,
-              sdp: offer.sdp,
-            },
-            (res: SocketResponse) => {}
-          );
-        };
       }
       const rtc = rtcRef.current[userId];
 
