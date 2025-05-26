@@ -32,6 +32,10 @@ type PeerConnections = {
   [userId: string]: RTCPeerConnection;
 };
 
+type OfferState = {
+  [userId: string]: boolean;
+};
+
 export default function Room() {
   const socket = useSocket();
   const { roomCode } = useParams();
@@ -56,6 +60,10 @@ export default function Room() {
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const rtcRef = useRef<PeerConnections>({});
+
+  // perfect negotiation
+  const makingOffer = useRef<OfferState>({});
+  const ignoreOffer = useRef<OfferState>({});
 
   // 현재 참여
   const [waitingUser, setWaitingUser] = useState<AuthUser>();
@@ -228,6 +236,9 @@ export default function Room() {
       ],
     });
 
+    makingOffer.current[userId] = false;
+    ignoreOffer.current[userId] = false;
+
     newPeerConnection.ontrack = (e) => {
       // 트랙 제거 시 ( 카메라를 사용하지 않는 상태에서 화면 공유 종료 시, 비디오 트랙 제거 )
       e.streams[0].onremovetrack = () => {
@@ -264,16 +275,24 @@ export default function Room() {
 
     newPeerConnection.onnegotiationneeded = async () => {
       const offer = await newPeerConnection.createOffer();
-      await newPeerConnection.setLocalDescription(offer);
-      socket?.emit(
-        "signal_send_offer",
-        {
-          roomCode,
-          toUserId: userId,
-          sdp: offer.sdp,
-        },
-        (res: SocketResponse) => {}
-      );
+      try {
+        makingOffer.current[userId] = true;
+        await newPeerConnection.setLocalDescription(offer);
+
+        socket?.emit(
+          "signal_send_offer",
+          {
+            roomCode,
+            toUserId: userId,
+            sdp: offer.sdp,
+          },
+          (res: SocketResponse) => {}
+        );
+      } catch (error) {
+        console.error("Offer error", error);
+      } finally {
+        makingOffer.current[userId] = false;
+      }
     };
 
     return newPeerConnection;
@@ -390,17 +409,25 @@ export default function Room() {
       }
       const rtc = rtcRef.current[userId];
 
-      const offer = await rtc.createOffer();
-      await rtc.setLocalDescription(offer);
-      socket.emit(
-        "signal_send_offer",
-        {
-          roomCode,
-          toUserId: userId,
-          sdp: offer.sdp,
-        },
-        (res: SocketResponse) => {}
-      );
+      try {
+        makingOffer.current[userId] = true;
+        // offer 생성 및 전송
+        const offer = await rtc.createOffer();
+        await rtc.setLocalDescription(offer);
+        socket.emit(
+          "signal_send_offer",
+          {
+            roomCode,
+            toUserId: userId,
+            sdp: offer.sdp,
+          },
+          (res: SocketResponse) => {}
+        );
+      } catch (error) {
+        console.error("Error creating offer:", error);
+      } finally {
+        makingOffer.current[userId] = false;
+      }
     };
 
     const handleSignalNotifyIce = ({
@@ -424,6 +451,27 @@ export default function Room() {
     }: SignalNotifyData) => {
       const rtc = rtcRef.current[fromUserId];
 
+      if (!authUser) {
+        console.error("AuthUser not found");
+        return;
+      }
+
+      if (!rtc) {
+        console.error("PeerConnection not found for userId:", fromUserId);
+        return;
+      }
+
+      const isPolite = authUser.userId > fromUserId;
+      const isCollision =
+        makingOffer.current[fromUserId] || rtc.signalingState !== "stable";
+
+      ignoreOffer.current[fromUserId] = !isPolite && isCollision;
+
+      if (ignoreOffer.current[fromUserId]) {
+        console.log("Ignoring offer from:", fromUserId);
+        return;
+      }
+
       try {
         await rtc.setRemoteDescription({ type: "offer", sdp });
 
@@ -439,7 +487,7 @@ export default function Room() {
           (_: SocketResponse) => {}
         );
       } catch (error) {
-        console.error("Error handling offer:", error);
+        console.error("Error in creating Answer:", error);
       }
     };
 
