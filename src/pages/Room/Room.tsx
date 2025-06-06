@@ -11,6 +11,7 @@ import Button from "../../components/common/Button/Button";
 import Label from "../../components/common/Label/Label";
 import { AuthUser } from "../../types/auth";
 import {
+  CallNotifyScreenShareOffData,
   Chat,
   Participant,
   RoomNotifyUpdateData,
@@ -36,6 +37,10 @@ type OfferState = {
   [userId: string]: boolean;
 };
 
+type ScreenShareState = {
+  [userId: string]: boolean;
+};
+
 export default function Room() {
   const socket = useSocket();
   const { roomCode } = useParams();
@@ -46,24 +51,33 @@ export default function Room() {
   const { mediaState } = useMediaState();
 
   const myStream = useRef<MediaStream>();
+  const myScreenShareStream = useRef<MediaStream>();
 
   const [mute, setMute] = useState<boolean>(false);
   const [videoOff, setVideoOff] = useState<boolean>(false);
 
-  const [onScreenShare, setOnScreenShare] = useState<boolean>(false);
+  const [onScreenShare, setOnScreenShare] = useState<ScreenShareState>({});
 
   const videoRefs = useRef<{ [userId: string]: HTMLVideoElement | null }>({});
+  const screenShareVideoRefs = useRef<{
+    [userId: string]: HTMLVideoElement | null;
+  }>({});
+
   const [isVideoPlaying, setIsVideoPlaying] = useState<Record<string, boolean>>(
     {}
   );
 
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+
   const rtcRef = useRef<PeerConnections>({});
+  const screenShareRtcRef = useRef<PeerConnections>({});
 
   // perfect negotiation
   const makingOffer = useRef<OfferState>({});
   const ignoreOffer = useRef<OfferState>({});
+
+  const makingScreenShareOffer = useRef<OfferState>({});
 
   // 현재 참여
   const [waitingUser, setWaitingUser] = useState<AuthUser>();
@@ -94,6 +108,29 @@ export default function Room() {
         videoRefs.current[userId]?.removeEventListener("pause", handlePause);
         videoRefs.current[userId]?.removeEventListener("ended", handleEnded);
         delete videoRefs.current[userId];
+      }
+    },
+    []
+  );
+
+  const setScreenShareVideoRef = useCallback(
+    (userId: string) => (node: HTMLVideoElement | null) => {
+      const handlePlay = () =>
+        setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
+
+      if (node) {
+        screenShareVideoRefs.current[userId] = node;
+
+        screenShareVideoRefs.current[userId].addEventListener(
+          "play",
+          handlePlay
+        );
+      } else {
+        screenShareVideoRefs.current[userId]?.removeEventListener(
+          "play",
+          handlePlay
+        );
+        delete screenShareVideoRefs.current[userId];
       }
     },
     []
@@ -134,10 +171,7 @@ export default function Room() {
   }, [socket, navigate]);
 
   useEffect(() => {
-    // 미디어 장치 사용 설정 후 입장시 / 화면 공유 종료 시 / 미디어 장치 변경 시
-    if (onScreenShare) {
-      return;
-    }
+    // 미디어 장치 사용 설정 후 입장시 / 미디어 장치 변경 시
     if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
       const constraints: MediaStreamConstraints = {
         video: false,
@@ -191,11 +225,15 @@ export default function Room() {
           console.error(err);
         });
     }
-  }, [mediaState, authUser, onScreenShare, participants]);
+  }, [mediaState, authUser, participants]);
 
   // Cleanup
   useEffect(() => {
     const connections = rtcRef.current;
+    const screenShareConnections = screenShareRtcRef.current;
+    const stream = myStream.current;
+    const screenShareStream = myScreenShareStream.current;
+
     return () => {
       if (socket?.connected) {
         socket?.emit("room_leave");
@@ -205,14 +243,25 @@ export default function Room() {
           rtc.close();
         });
       }
-      if (myStream.current) {
-        myStream.current.getTracks().forEach((track) => track.stop());
+
+      if (screenShareConnections) {
+        Object.values(screenShareConnections).forEach((rtc) => {
+          rtc.close();
+        });
+      }
+
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      if (screenShareStream) {
+        screenShareStream.getTracks().forEach((track) => track.stop());
       }
 
       setTimeout(() => {
         socket?.removeAllListeners();
         socket?.disconnect();
-      }, 10);
+      }, 30);
     };
   }, [socket]);
 
@@ -275,6 +324,7 @@ export default function Room() {
 
     newPeerConnection.onnegotiationneeded = async () => {
       const offer = await newPeerConnection.createOffer();
+
       try {
         makingOffer.current[userId] = true;
         await newPeerConnection.setLocalDescription(offer);
@@ -294,6 +344,128 @@ export default function Room() {
         makingOffer.current[userId] = false;
       }
     };
+
+    return newPeerConnection;
+  };
+
+  const createScreenSharePeerConnectionByUserId = (userId: string) => {
+    const newPeerConnection = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: [
+            "stun:stun.l.google.com:19302",
+            "stun:stun1.l.google.com:19302",
+            "stun:stun2.l.google.com:19302",
+            "stun:stun3.l.google.com:19302",
+            "stun:stun4.l.google.com:19302",
+          ],
+        },
+        {
+          urls: import.meta.env.VITE_TURN_SERVER_URL,
+          username: import.meta.env.VITE_TURN_SERVER_USERNAME,
+          credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL,
+        },
+      ],
+    });
+
+    makingScreenShareOffer.current[userId] = false;
+
+    newPeerConnection.ontrack = (e) => {
+      setOnScreenShare((prev) => ({
+        ...prev,
+        [userId]: true,
+      }));
+
+      e.streams[0].onremovetrack = () => {
+        if (!videoRefs.current[userId]) {
+          setIsVideoPlaying((prev) => ({
+            ...prev,
+            [userId]: false,
+          }));
+        }
+        setOnScreenShare((prev) => ({
+          ...prev,
+          [userId]: false,
+        }));
+        screenShareVideoRefs.current[userId]!.srcObject = null;
+      };
+
+      // 화면 공유 종료 시, 수신 측에서 즉각 종료되지 않고 화면이 몇 초 간 정지해있는 상태를 해결하고자 onended, onremovetrack, onmute 등 다양한 방법을 시도해보았으나 해결되지 않음
+      // 따라서, 화면 공유 종료를 알리는 소켓 이벤트를 생성하고 수신 측에서 이를 감지하여 화면 공유 종료를 처리하도록 하여 UI를 즉시 업데이트하도록 함
+      // e.track.onmute = () => {
+      //   console.log("onended event triggered for screen share");
+      //   if (!videoRefs.current[userId]) {
+      //     setIsVideoPlaying((prev) => ({
+      //       ...prev,
+      //       [userId]: false,
+      //     }));
+      //   }
+      //   setOnScreenShare((prev) => ({
+      //     ...prev,
+      //     [userId]: false,
+      //   }));
+      //   screenShareVideoRefs.current[userId]!.srcObject = null;
+      // };
+
+      screenShareVideoRefs.current[userId]!.srcObject = e.streams[0];
+    };
+
+    newPeerConnection.onicecandidate = (e) => {
+      if (e.candidate) {
+        socket?.emit(
+          "signal_send_ice_screen_share",
+          {
+            roomCode,
+            toUserId: userId,
+            candidate: e.candidate.candidate,
+            sdpMid: e.candidate.sdpMid,
+            sdpMLineIndex: e.candidate.sdpMLineIndex,
+          },
+          (_: SocketResponse) => {}
+        );
+      }
+    };
+
+    newPeerConnection.onnegotiationneeded = async () => {
+      const offer = await newPeerConnection.createOffer();
+
+      try {
+        makingScreenShareOffer.current[userId] = true;
+        await newPeerConnection.setLocalDescription(offer);
+
+        socket?.emit(
+          "signal_send_offer_screen_share",
+          {
+            roomCode,
+            toUserId: userId,
+            sdp: offer.sdp,
+          },
+          (res: SocketResponse) => {}
+        );
+      } catch (error) {
+      } finally {
+        makingScreenShareOffer.current[userId] = false;
+      }
+    };
+
+    // newPeerConnection.onconnectionstatechange = () => {
+    //   if (
+    //     newPeerConnection.connectionState === "disconnected" ||
+    //     newPeerConnection.connectionState === "closed"
+    //   ) {
+    //     const stream = screenShareVideoRefs.current[userId]?.srcObject;
+    //     if (stream) {
+    //       (stream as MediaStream).getTracks().forEach((track) => track.stop());
+    //     }
+    //     setOnScreenShare((prev) => ({
+    //       ...prev,
+    //       [userId]: false,
+    //     }));
+    //     screenShareVideoRefs.current[userId]!.srcObject = null;
+    //     newPeerConnection.close();
+    //     delete screenShareRtcRef.current[userId];
+    //   }
+    // };
 
     return newPeerConnection;
   };
@@ -346,6 +518,12 @@ export default function Room() {
         rtcRef.current[changedUser.userId] = createPeerConnectionByUserId(
           changedUser.userId
         );
+
+        if (myScreenShareStream.current) {
+          // 화면 공유 중인 경우, 해당 유저에 대한 PeerConnection 생성
+          screenShareRtcRef.current[changedUser.userId] =
+            createScreenSharePeerConnectionByUserId(changedUser.userId);
+        }
 
         myStream.current?.getTracks().forEach((track) => {
           rtcRef.current[changedUser.userId].addTrack(track, myStream.current!);
@@ -445,6 +623,26 @@ export default function Room() {
       );
     };
 
+    const handleSignalNotifyScreenShareIce = ({
+      fromUserId,
+      candidate,
+      sdpMid,
+      sdpMLineIndex,
+    }: SignalNotifyIceData) => {
+      if (!screenShareRtcRef.current[fromUserId]) {
+        screenShareRtcRef.current[fromUserId] =
+          createScreenSharePeerConnectionByUserId(fromUserId);
+      }
+
+      screenShareRtcRef.current[fromUserId].addIceCandidate(
+        new RTCIceCandidate({
+          candidate,
+          sdpMid,
+          sdpMLineIndex,
+        })
+      );
+    };
+
     const handleSignalNotifyOffer = async ({
       fromUserId,
       sdp,
@@ -491,10 +689,62 @@ export default function Room() {
       }
     };
 
+    const handleSignalNotifyScreenShareOffer = async ({
+      fromUserId,
+      sdp,
+    }: SignalNotifyData) => {
+      if (!authUser) {
+        console.error("AuthUser not found");
+        return;
+      }
+
+      screenShareRtcRef.current[fromUserId] =
+        createScreenSharePeerConnectionByUserId(fromUserId);
+
+      const rtc = screenShareRtcRef.current[fromUserId];
+
+      const isPolite = authUser.userId > fromUserId;
+      const isCollision =
+        makingScreenShareOffer.current[fromUserId] ||
+        rtc.signalingState !== "stable";
+
+      const ignoreOffer = !isPolite && isCollision;
+
+      if (ignoreOffer) {
+        console.log("Ignoring screen share offer from:", fromUserId);
+        return;
+      }
+
+      try {
+        await rtc.setRemoteDescription({ type: "offer", sdp });
+
+        const answer = await rtc.createAnswer();
+        await rtc.setLocalDescription(answer);
+        socket.emit(
+          "signal_send_answer_screen_share",
+          {
+            roomCode,
+            toUserId: fromUserId,
+            sdp: answer.sdp,
+          },
+          (_: SocketResponse) => {}
+        );
+      } catch (error) {
+        console.error("Error in creating screen share answer:", error);
+      }
+    };
+
     const handleSignalNotifyAnswer = ({
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
+      if (
+        rtcRef.current[fromUserId].remoteDescription ||
+        rtcRef.current[fromUserId].signalingState !== "have-local-offer"
+      ) {
+        return; // 이미 remoteDescription이 설정되어 있는 경우 중복 설정 방지
+      }
+
       rtcRef.current[fromUserId]
         .setRemoteDescription({
           type: "answer",
@@ -503,6 +753,48 @@ export default function Room() {
         .catch((error) => {
           console.error("Error setting remote description:", error);
         });
+    };
+
+    const handleSignalNotifyScreenShareAnswer = ({
+      fromUserId,
+      sdp,
+    }: SignalNotifyData) => {
+      screenShareRtcRef.current[fromUserId]
+        .setRemoteDescription({
+          type: "answer",
+          sdp,
+        })
+        .catch((error) => {
+          console.error(
+            "Error setting screen share remote description:",
+            error
+          );
+        });
+    };
+
+    const handleNotifyScreenShareOff = ({
+      name,
+      fromUserId,
+    }: CallNotifyScreenShareOffData) => {
+      if (screenShareVideoRefs.current[fromUserId]) {
+        const stream = screenShareVideoRefs.current[fromUserId]?.srcObject;
+        if (stream) {
+          (stream as MediaStream).getTracks().forEach((track) => track.stop());
+        }
+        screenShareVideoRefs.current[fromUserId]!.srcObject = null;
+        screenShareRtcRef.current[fromUserId].close();
+        delete screenShareRtcRef.current[fromUserId];
+      }
+      setOnScreenShare((prev) => ({
+        ...prev,
+        [fromUserId]: false,
+      }));
+      if (!videoRefs.current[fromUserId]?.srcObject) {
+        setIsVideoPlaying((prev) => ({
+          ...prev,
+          [fromUserId]: false,
+        }));
+      }
     };
 
     const handleRoomNotifyUpdateOwner = () => {
@@ -523,12 +815,27 @@ export default function Room() {
 
     // icecandidate 수신
     socket.on("signal_notify_ice", handleSignalNotifyIce);
+    socket.on(
+      "signal_notify_ice_screen_share",
+      handleSignalNotifyScreenShareIce
+    );
 
     // offer 수신 및 answer 전송
     socket.on("signal_notify_offer", handleSignalNotifyOffer);
+    socket.on(
+      "signal_notify_offer_screen_share",
+      handleSignalNotifyScreenShareOffer
+    );
 
     // answer 수신
     socket.on("signal_notify_answer", handleSignalNotifyAnswer);
+    socket.on(
+      "signal_notify_answer_screen_share",
+      handleSignalNotifyScreenShareAnswer
+    );
+
+    // 화면 공유 종료 수신
+    socket.on("call_notify_screen_share_off", handleNotifyScreenShareOff);
 
     // 방장 변경 알림
     socket.on("room_notify_update_owner", handleRoomNotifyUpdateOwner);
@@ -541,8 +848,21 @@ export default function Room() {
       );
       socket.off("rtc_ready", handleRtcReady);
       socket.off("signal_notify_ice", handleSignalNotifyIce);
+      socket.off(
+        "signal_notify_ice_screen_share",
+        handleSignalNotifyScreenShareIce
+      );
       socket.off("signal_notify_offer", handleSignalNotifyOffer);
+      socket.off(
+        "signal_notify_offer_screen_share",
+        handleSignalNotifyScreenShareOffer
+      );
+      socket.off("call_notify_screen_share_off", handleNotifyScreenShareOff);
       socket.off("signal_notify_answer", handleSignalNotifyAnswer);
+      socket.off(
+        "signal_notify_answer_screen_share",
+        handleSignalNotifyScreenShareAnswer
+      );
       socket.off("room_notify_update_owner", handleRoomNotifyUpdateOwner);
     };
   }, [socket, roomCode]);
@@ -582,9 +902,19 @@ export default function Room() {
   }, [socket, waitingUser]);
 
   const startScreenShare = () => {
-    if (!videoRefs.current[authUser!.userId]) {
-      return;
-    }
+    // if (!screenShareVideoRefs.current[authUser!.userId]) {
+    //   return;
+    // }
+
+    participants.forEach((participant) => {
+      if (participant.userId === authUser?.userId) {
+        return;
+      }
+      // if (!screenShareRtcRef.current[participant.userId]) {
+      screenShareRtcRef.current[participant.userId] =
+        createScreenSharePeerConnectionByUserId(participant.userId);
+      // }
+    });
 
     navigator.mediaDevices
       .getDisplayMedia({
@@ -593,52 +923,45 @@ export default function Room() {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
+        audio: true,
       })
       .then((stream) => {
-        myStream.current = stream;
-        setOnScreenShare(true);
+        myScreenShareStream.current = stream;
+        setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: true }));
 
-        videoRefs.current[authUser!.userId]!.srcObject = stream;
+        screenShareVideoRefs.current[authUser!.userId]!.srcObject = stream;
 
-        Object.values(rtcRef.current).forEach((rtc) => {
-          const videoSender = rtc
-            .getSenders()
-            .find((sender) => sender.track?.kind === "video");
-
-          if (videoSender) {
-            videoSender.replaceTrack(stream.getVideoTracks()[0]);
-          } else {
-            stream.getTracks().forEach((track) => {
-              const sender = rtc.addTrack(track, myStream.current!);
-              const parameters = sender.getParameters();
-              if (parameters.encodings) {
-                parameters.encodings = parameters.encodings.map(
-                  (encoding, index) => {
-                    if (index === 0) {
-                      return {
-                        ...encoding,
-                        scaleResolutionDownBy: 1.0,
-                        maxBitrate: 2500000,
-                      }; // 고화질
-                    } else if (index === 1) {
-                      return {
-                        ...encoding,
-                        scaleResolutionDownBy: 2.0,
-                        maxBitrate: 1000000,
-                      }; // 중화질
-                    } else {
-                      return {
-                        ...encoding,
-                        scaleResolutionDownBy: 4.0,
-                        maxBitrate: 500000,
-                      }; // 저화질
-                    }
+        Object.values(screenShareRtcRef.current).forEach((rtc) => {
+          stream.getTracks().forEach((track) => {
+            const sender = rtc.addTrack(track, stream);
+            const parameters = sender.getParameters();
+            if (parameters.encodings) {
+              parameters.encodings = parameters.encodings.map(
+                (encoding, index) => {
+                  if (index === 0) {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 1.0,
+                      maxBitrate: 2500000,
+                    }; // 고화질
+                  } else if (index === 1) {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 2.0,
+                      maxBitrate: 1000000,
+                    }; // 중화질
+                  } else {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 4.0,
+                      maxBitrate: 500000,
+                    }; // 저화질
                   }
-                );
-                sender.setParameters(parameters);
-              }
-            });
-          }
+                }
+              );
+              sender.setParameters(parameters);
+            }
+          });
         });
       })
       .catch((err) => {
@@ -647,45 +970,40 @@ export default function Room() {
   };
 
   const stopScreenShare = () => {
-    if (!myStream.current) {
+    if (!myScreenShareStream.current) {
       return;
     }
 
-    myStream.current.getVideoTracks()[0].stop();
+    myScreenShareStream.current.getTracks().forEach((track) => {
+      myScreenShareStream.current!.removeTrack(track);
+      track.stop();
+    });
+    screenShareVideoRefs.current[authUser!.userId]!.srcObject = null;
 
-    if (!mediaState.camera.deviceId) {
-      // 피어커넥션 트랙 제거
-      setIsVideoPlaying((prev) => ({ ...prev, [authUser!.userId]: false }));
-      Object.values(rtcRef.current).forEach((rtc) => {
-        const videoSender = rtc
-          .getSenders()
-          .find(
-            (sender) => sender.track === myStream.current!.getVideoTracks()[0]
-          );
-
-        if (!videoSender) {
-          console.log("videoTrack not found");
-          console.log(
-            "videoTrack not found. Available senders:",
-            rtc.getSenders().map((sender) => sender.track)
-          );
-          return;
-        }
-        rtc.removeTrack(videoSender);
-      });
-
-      // 마이크 사용 X, 카메라 사용 X 인 상태에서 화면 공유 종료 시, srcObject 초기화
-      const remainingTracks = myStream.current.getTracks();
-      if (remainingTracks.length === 0) {
-        videoRefs.current[authUser!.userId]!.srcObject = null;
-      }
-
-      myStream.current = undefined;
-      if (!mediaState.camera.deviceId) {
-        videoRefs.current[authUser!.userId]!.srcObject = null;
-      }
+    if (!myStream.current) {
+      setIsVideoPlaying((prev) => ({
+        ...prev,
+        [authUser!.userId]: false,
+      }));
     }
-    setOnScreenShare(false);
+
+    socket?.emit(
+      "call_notify_screen_share_off",
+      {
+        roomCode,
+      },
+      (res: SocketResponse) => {}
+    );
+
+    Object.values(screenShareRtcRef.current).forEach((rtc) => {
+      rtc.getSenders().forEach((sender) => {
+        sender.replaceTrack(null);
+        rtc.removeTrack(sender);
+      });
+      rtc.close();
+    });
+
+    setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: false }));
   };
 
   const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -731,7 +1049,18 @@ export default function Room() {
                 }`}
               />
             )}
-            <video ref={setVideoRef(participant.userId)} autoPlay playsInline />
+            <video
+              ref={setVideoRef(participant.userId)}
+              autoPlay
+              playsInline
+              className={onScreenShare[participant.userId] ? styles.hidden : ""}
+            />
+            <video
+              ref={setScreenShareVideoRef(participant.userId)}
+              autoPlay
+              playsInline
+              className={onScreenShare[participant.userId] ? "" : styles.hidden}
+            />
             <Label
               style={{
                 position: "absolute",
@@ -758,9 +1087,13 @@ export default function Room() {
           <Button
             style="secondary"
             size="sm"
-            onClick={onScreenShare ? stopScreenShare : startScreenShare}
+            onClick={
+              onScreenShare[authUser!.userId]
+                ? stopScreenShare
+                : startScreenShare
+            }
           >
-            {onScreenShare ? "화면 공유 중지" : "화면 공유"}
+            {onScreenShare[authUser!.userId] ? "화면 공유 중지" : "화면 공유"}
           </Button>
           <Button
             style="secondary"

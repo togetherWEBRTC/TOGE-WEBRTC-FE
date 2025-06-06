@@ -27,6 +27,11 @@ export type SignalNotifyData = {
   sdp: string;
 };
 
+export type CallNotifyScreenShareOffData = {
+  name: "call_notify_screen_share_off";
+  fromUserId: string;
+};
+
 export type RoomNotifyWaitData = {
   name: "room_notify_wait";
   waitingList: AuthUser[];

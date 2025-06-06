@@ -40,6 +40,10 @@
   height: 100%;
 }
 
+.hidden {
+  display: none;
+}
+
 .actionBar {
   position: absolute;
   display: flex;
