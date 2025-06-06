@@ -1114,7 +1114,7 @@ export default function Room() {
               <li key={chat.sendedTime}>
                 {chat.name === "system_message"
                   ? chat.message
-                  : `${chat.senderInfo.userId}: ${chat.message}`}
+                  : `${chat.senderInfo.userId}  ${chat.message}`}
               </li>
             ))}
           </ul>
@@ -1122,8 +1122,13 @@ export default function Room() {
             className={styles.inputContainer}
             onSubmit={handleMessageSubmit}
           >
-            <input type="text" id="chat" name="message" placeholder="입력 창" />
-            <button>채 팅 입 력</button>
+            <input
+              type="text"
+              id="chat"
+              name="message"
+              placeholder="메시지 보내기"
+            />
+            <button>채팅</button>
           </form>
         </div>
       )}

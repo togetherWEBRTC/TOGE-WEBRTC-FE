@@ -98,49 +98,63 @@
 }
 
 .chatSection {
+  border-top: 1px solid var(--grey-900);
+  border-left: 1px solid var(--grey-900);
   width: 25%;
   max-width: 400px;
   color: var(--white);
   display: flex;
   flex-direction: column;
-  background-color: var(--primary-100);
+  background-color: var(--grey-999);
 }
 
 .chatList {
   flex: 1 1 auto;
-  color: black;
+  color: var(--white);
   list-style: none;
   padding: 10px;
   outline: none;
 }
 
+.chatList li {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .inputContainer {
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  height: 100px;
   width: 100%;
+  margin-bottom: 10px;
 }
 
 .inputContainer input {
+  border-radius: 4px;
   padding-left: 10px;
   height: 40px;
-  width: 100%;
   outline: none;
   border: none;
+  margin-bottom: 10px;
 }
 
 .inputContainer button {
-  width: 100%;
+  border-radius: 4px;
+  height: 30px;
+  width: 40px;
   flex: 1 1 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: var(--success-100);
+  justify-self: end;
+  align-self: end;
+  background-color: var(--secondary-300);
   outline: none;
   border: none;
   cursor: pointer;
 }
 
 .inputContainer button:hover {
-  background-color: var(--success-200);
+  background-color: var(--secondary-400);
 }
