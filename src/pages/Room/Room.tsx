@@ -522,14 +522,21 @@ export default function Room() {
           changedUser.userId
         );
 
+        myStream.current?.getTracks().forEach((track) => {
+          rtcRef.current[changedUser.userId].addTrack(track, myStream.current!);
+        });
+
+        // 화면 공유 중인 경우, 해당 유저에 대한 PeerConnection 생성
         if (myScreenShareStream.current) {
-          // 화면 공유 중인 경우, 해당 유저에 대한 PeerConnection 생성
           screenShareRtcRef.current[changedUser.userId] =
             createScreenSharePeerConnectionByUserId(changedUser.userId);
         }
 
-        myStream.current?.getTracks().forEach((track) => {
-          rtcRef.current[changedUser.userId].addTrack(track, myStream.current!);
+        myScreenShareStream.current?.getTracks().forEach((track) => {
+          screenShareRtcRef.current[changedUser.userId].addTrack(
+            track,
+            myScreenShareStream.current!
+          );
         });
 
         const systemMessage: Chat = {
@@ -554,6 +561,13 @@ export default function Room() {
         const PeerConnection = rtcRef.current[changedUser.userId];
         PeerConnection.close();
         delete rtcRef.current[changedUser.userId];
+
+        const screenSharePeerConnection =
+          screenShareRtcRef.current[changedUser.userId];
+        if (screenSharePeerConnection) {
+          screenSharePeerConnection.close();
+          delete screenShareRtcRef.current[changedUser.userId];
+        }
 
         const systemMessage: Chat = {
           name: "system_message",
@@ -925,6 +939,7 @@ export default function Room() {
           frameRate: { ideal: 60 },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
+          logicalSurface: true,
         },
         audio: true,
       })
@@ -945,19 +960,19 @@ export default function Room() {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 1.0,
-                      maxBitrate: 2500000,
+                      maxBitrate: 5_000_000,
                     }; // 고화질
                   } else if (index === 1) {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 2.0,
-                      maxBitrate: 1000000,
+                      maxBitrate: 2_000_000,
                     }; // 중화질
                   } else {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 4.0,
-                      maxBitrate: 500000,
+                      maxBitrate: 800_000,
                     }; // 저화질
                   }
                 }
@@ -1045,19 +1060,20 @@ export default function Room() {
   return (
     <main className={styles.container}>
       <div className={styles.videoSection}>
-        {participants.map((participant) => (
-          <VideoBox
-            key={participant.userId}
-            participant={participant}
-            focused={focused}
-            setFocused={setFocused}
-            isVideoPlaying={isVideoPlaying}
-            onScreenShare={onScreenShare}
-            setVideoRef={setVideoRef}
-            setScreenShareVideoRef={setScreenShareVideoRef}
-          />
-        ))}
-
+        <div className={styles.videoContainer}>
+          {participants.map((participant) => (
+            <VideoBox
+              key={participant.userId}
+              participant={participant}
+              focused={focused}
+              setFocused={setFocused}
+              isVideoPlaying={isVideoPlaying}
+              onScreenShare={onScreenShare}
+              setVideoRef={setVideoRef}
+              setScreenShareVideoRef={setScreenShareVideoRef}
+            />
+          ))}
+        </div>
         <div className={styles.actionBar}>
           <button className={styles.iconContainer} onClick={toggleVideo}>
             {videoOff ? <BsCameraVideoOff /> : <BsCameraVideo />}

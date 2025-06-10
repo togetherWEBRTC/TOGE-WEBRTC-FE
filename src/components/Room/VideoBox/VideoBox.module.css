@@ -7,9 +7,15 @@
   overflow: hidden;
 }
 
-.focused {
+.fullWidth {
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.fullHeight {
+  height: 100%;
+  width: auto;
   aspect-ratio: 16 / 9;
 }
 

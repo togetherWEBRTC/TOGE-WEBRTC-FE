@@ -30,6 +30,7 @@ export default function VideoBox(props: Props) {
   const [showControls, setShowControls] = useState<boolean>(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const videoBoxRef = useRef<HTMLDivElement>(null);
+  const [isPortrait, setIsPortrait] = useState(false);
 
   const handleMouseMove = () => {
     setShowControls(true);
@@ -40,7 +41,7 @@ export default function VideoBox(props: Props) {
 
     timeoutRef.current = setTimeout(() => {
       setShowControls(false);
-    }, 2000);
+    }, 1000);
   };
 
   useEffect(() => {
@@ -59,12 +60,41 @@ export default function VideoBox(props: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    let timeoutId: number | null = null;
+
+    const checkRatio = () => {
+      const box = videoBoxRef.current;
+      if (!box) return;
+      const parent = box.parentElement;
+      if (!parent) return;
+      const { clientWidth, clientHeight } = parent;
+      setIsPortrait(clientHeight > (clientWidth * 9) / 16);
+    };
+
+    const throttledCheckRatio = () => {
+      if (timeoutId !== null) return;
+      timeoutId = window.setTimeout(() => {
+        checkRatio();
+        timeoutId = null;
+      }, 30);
+    };
+
+    throttledCheckRatio();
+    window.addEventListener("resize", throttledCheckRatio);
+    return () => {
+      window.removeEventListener("resize", throttledCheckRatio);
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
+  }, []);
+
   return (
     <div
       ref={videoBoxRef}
       className={`${styles.videoBox} ${getFocusedStyle(
         focused,
-        participant.userId
+        participant.userId,
+        isPortrait
       )}`}
       onClick={() => {
         setFocused(participant.userId);
@@ -117,12 +147,16 @@ export default function VideoBox(props: Props) {
   );
 }
 
-function getFocusedStyle(focused: string | undefined, userId: string) {
+function getFocusedStyle(
+  focused: string | undefined,
+  userId: string,
+  isPortrait: boolean
+) {
   if (!focused) {
     return;
   }
   if (focused === userId) {
-    return styles.focused;
+    return isPortrait ? styles.fullWidth : styles.fullHeight;
   } else {
     return styles.hidden;
   }
