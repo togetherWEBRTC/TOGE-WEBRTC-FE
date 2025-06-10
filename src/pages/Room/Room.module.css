@@ -16,34 +16,6 @@
   align-items: center;
 }
 
-.videoBox {
-  position: relative;
-  border-radius: 5px;
-  width: 400px;
-  height: 300px;
-  background-color: var(--grey-800);
-}
-
-.avatar {
-  display: hidden;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.videoBox video {
-  width: 100%;
-  height: 100%;
-}
-
-.hidden {
-  display: none;
-}
-
 .actionBar {
   position: absolute;
   display: flex;

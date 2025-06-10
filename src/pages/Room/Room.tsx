@@ -28,6 +28,7 @@ import {
   BsMicMute,
   BsLink45Deg,
 } from "react-icons/bs";
+import VideoBox from "../../components/Room/VideoBox/VideoBox";
 
 type PeerConnections = {
   [userId: string]: RTCPeerConnection;
@@ -55,6 +56,8 @@ export default function Room() {
 
   const [mute, setMute] = useState<boolean>(false);
   const [videoOff, setVideoOff] = useState<boolean>(false);
+
+  const [focused, setFocused] = useState<string>();
 
   const [onScreenShare, setOnScreenShare] = useState<ScreenShareState>({});
 
@@ -1040,38 +1043,16 @@ export default function Room() {
     <main className={styles.container}>
       <div className={styles.videoSection}>
         {participants.map((participant) => (
-          <div className={styles.videoBox} key={participant.userId}>
-            {!isVideoPlaying[participant.userId] && (
-              <img
-                className={styles.avatar}
-                src={`${import.meta.env.VITE_BASE_RESOURCE_URL}/${
-                  participant.profileUrl
-                }`}
-              />
-            )}
-            <video
-              ref={setVideoRef(participant.userId)}
-              autoPlay
-              playsInline
-              className={onScreenShare[participant.userId] ? styles.hidden : ""}
-            />
-            <video
-              ref={setScreenShareVideoRef(participant.userId)}
-              autoPlay
-              playsInline
-              className={onScreenShare[participant.userId] ? "" : styles.hidden}
-            />
-            <Label
-              style={{
-                position: "absolute",
-                bottom: "4px",
-                left: "16px",
-                color: "var(--white)",
-              }}
-            >
-              {participant.name}
-            </Label>
-          </div>
+          <VideoBox
+            key={participant.userId}
+            participant={participant}
+            focused={focused}
+            setFocused={setFocused}
+            isVideoPlaying={isVideoPlaying}
+            onScreenShare={onScreenShare}
+            setVideoRef={setVideoRef}
+            setScreenShareVideoRef={setScreenShareVideoRef}
+          />
         ))}
 
         <div className={styles.actionBar}>
