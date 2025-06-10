@@ -1036,6 +1036,9 @@ export default function Room() {
   };
 
   const quitRoom = () => {
+    if (myScreenShareStream.current) {
+      myScreenShareStream.current.getTracks().forEach((track) => track.stop());
+    }
     navigate("/");
   };
 
