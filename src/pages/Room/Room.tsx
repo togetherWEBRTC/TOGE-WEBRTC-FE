@@ -8,7 +8,6 @@ import { ResCode } from "../../constants/response";
 import Portal from "../../components/common/Portal";
 import RoomToast from "../../components/Room/RoomToast/RoomToast";
 import Button from "../../components/common/Button/Button";
-import Label from "../../components/common/Label/Label";
 import { AuthUser } from "../../types/auth";
 import {
   CallNotifyScreenShareOffData,
@@ -264,7 +263,7 @@ export default function Room() {
       setTimeout(() => {
         socket?.removeAllListeners();
         socket?.disconnect();
-      }, 30);
+      }, 10);
     };
   }, [socket]);
 
@@ -446,6 +445,7 @@ export default function Room() {
           (res: SocketResponse) => {}
         );
       } catch (error) {
+        console.error("Screen share offer error", error);
       } finally {
         makingScreenShareOffer.current[userId] = false;
       }
@@ -586,6 +586,7 @@ export default function Room() {
 
         setChatList((prev) => [...prev, systemMessage]);
       }
+      console.log("isJoined", isJoined);
       setParticipants(participants);
     };
 
@@ -991,6 +992,8 @@ export default function Room() {
     if (!myScreenShareStream.current) {
       return;
     }
+
+    console.log("participants", participants);
 
     myScreenShareStream.current.getTracks().forEach((track) => {
       myScreenShareStream.current!.removeTrack(track);
