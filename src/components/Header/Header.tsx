@@ -39,7 +39,7 @@ export default function Header() {
               <span className={styles.userName}>{authUser.name} 님</span>
             </div>
           )}
-          {authUser ? (
+          {pathname.startsWith("/room") ? undefined : authUser ? (
             <Button
               style={"secondary"}
               size={"md"}
