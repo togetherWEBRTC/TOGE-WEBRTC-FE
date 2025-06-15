@@ -81,6 +81,9 @@ export default function Room() {
 
   const makingScreenShareOffer = useRef<OfferState>({});
 
+  // test ice queue
+  // const candidateQueue = useRef<{ [userId: string]: RTCIceCandidate[] }>({});
+
   // 현재 참여
   const [waitingUser, setWaitingUser] = useState<AuthUser>();
 
@@ -173,7 +176,7 @@ export default function Room() {
   }, [socket, navigate]);
 
   useEffect(() => {
-    // 미디어 장치 사용 설정 후 입장시 / 미디어 장치 변경 시
+    // 미디어 장치 스트림 받아오기 ( 장치 변경 포함 )
     if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
       const constraints: MediaStreamConstraints = {
         video: false,
@@ -235,11 +238,7 @@ export default function Room() {
     const screenShareConnections = screenShareRtcRef.current;
     const stream = myStream.current;
     const screenShareStream = myScreenShareStream.current;
-
     return () => {
-      if (socket?.connected) {
-        socket?.emit("room_leave");
-      }
       if (connections) {
         Object.values(connections).forEach((rtc) => {
           rtc.close();
@@ -260,10 +259,8 @@ export default function Room() {
         screenShareStream.getTracks().forEach((track) => track.stop());
       }
 
-      setTimeout(() => {
-        socket?.removeAllListeners();
-        socket?.disconnect();
-      }, 10);
+      socket?.removeAllListeners();
+      socket?.disconnect();
     };
   }, [socket]);
 
@@ -271,13 +268,7 @@ export default function Room() {
     const newPeerConnection = new RTCPeerConnection({
       iceServers: [
         {
-          urls: [
-            "stun:stun.l.google.com:19302",
-            "stun:stun1.l.google.com:19302",
-            "stun:stun2.l.google.com:19302",
-            "stun:stun3.l.google.com:19302",
-            "stun:stun4.l.google.com:19302",
-          ],
+          urls: ["stun:stun.l.google.com:19302"],
         },
         {
           urls: import.meta.env.VITE_TURN_SERVER_URL,
@@ -309,22 +300,29 @@ export default function Room() {
     };
 
     newPeerConnection.onicecandidate = (e) => {
-      if (e.candidate) {
-        socket?.emit(
-          "signal_send_ice",
-          {
-            roomCode,
-            toUserId: userId,
-            candidate: e.candidate.candidate,
-            sdpMid: e.candidate.sdpMid,
-            sdpMLineIndex: e.candidate.sdpMLineIndex,
-          },
-          (_: SocketResponse) => {}
-        );
+      const candidate = e.candidate;
+
+      if (!candidate || candidate.candidate.includes("typ host")) {
+        return;
       }
+
+      socket?.emit(
+        "signal_send_ice",
+        {
+          roomCode,
+          toUserId: userId,
+          candidate: candidate.candidate,
+          sdpMid: candidate.sdpMid,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+        },
+        (_: SocketResponse) => {}
+      );
     };
 
     newPeerConnection.onnegotiationneeded = async () => {
+      // if (newPeerConnection.signalingState !== "stable") {
+      //   return;
+      // }
       const offer = await newPeerConnection.createOffer();
 
       try {
@@ -451,25 +449,6 @@ export default function Room() {
       }
     };
 
-    // newPeerConnection.onconnectionstatechange = () => {
-    //   if (
-    //     newPeerConnection.connectionState === "disconnected" ||
-    //     newPeerConnection.connectionState === "closed"
-    //   ) {
-    //     const stream = screenShareVideoRefs.current[userId]?.srcObject;
-    //     if (stream) {
-    //       (stream as MediaStream).getTracks().forEach((track) => track.stop());
-    //     }
-    //     setOnScreenShare((prev) => ({
-    //       ...prev,
-    //       [userId]: false,
-    //     }));
-    //     screenShareVideoRefs.current[userId]!.srcObject = null;
-    //     newPeerConnection.close();
-    //     delete screenShareRtcRef.current[userId];
-    //   }
-    // };
-
     return newPeerConnection;
   };
 
@@ -586,7 +565,6 @@ export default function Room() {
 
         setChatList((prev) => [...prev, systemMessage]);
       }
-      console.log("isJoined", isJoined);
       setParticipants(participants);
     };
 
@@ -632,13 +610,19 @@ export default function Room() {
       sdpMid,
       sdpMLineIndex,
     }: SignalNotifyIceData) => {
-      rtcRef.current[fromUserId].addIceCandidate(
-        new RTCIceCandidate({
-          candidate,
-          sdpMid,
-          sdpMLineIndex,
-        })
-      );
+      const ice = new RTCIceCandidate({
+        candidate,
+        sdpMid,
+        sdpMLineIndex,
+      });
+
+      // test ice queue
+      // candidateQueue.current[fromUserId].push(ice);
+
+      rtcRef.current[fromUserId].addIceCandidate(ice).catch((error) => {
+        console.log("ice candidate 추가 실패:", ice);
+        console.error("Error adding ICE candidate:", error);
+      });
     };
 
     const handleSignalNotifyScreenShareIce = ({
@@ -690,6 +674,14 @@ export default function Room() {
 
       try {
         await rtc.setRemoteDescription({ type: "offer", sdp });
+
+        // // test ice queue
+        // candidateQueue.current[fromUserId]?.forEach((candidate) => {
+        //   rtc.addIceCandidate(candidate).catch((error) => {
+        //     console.error("Error adding queued ICE candidate:", error);
+        //   });
+        // });
+        // candidateQueue.current[fromUserId] = []; // 큐 비우기
 
         const answer = await rtc.createAnswer();
         await rtc.setLocalDescription(answer);
@@ -756,14 +748,12 @@ export default function Room() {
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
-      if (
-        rtcRef.current[fromUserId].remoteDescription ||
-        rtcRef.current[fromUserId].signalingState !== "have-local-offer"
-      ) {
-        return; // 이미 remoteDescription이 설정되어 있는 경우 중복 설정 방지
+      const rtc = rtcRef.current[fromUserId];
+      if (rtc.signalingState !== "have-local-offer") {
+        return;
       }
 
-      rtcRef.current[fromUserId]
+      rtc
         .setRemoteDescription({
           type: "answer",
           sdp,
@@ -771,6 +761,14 @@ export default function Room() {
         .catch((error) => {
           console.error("Error setting remote description:", error);
         });
+
+      // // test ice queue
+      // candidateQueue.current[fromUserId]?.forEach((candidate) => {
+      //   rtcRef.current[fromUserId].addIceCandidate(candidate).catch((error) => {
+      //     console.error("Error adding queued ICE candidate:", error);
+      //   });
+      // });
+      // candidateQueue.current[fromUserId] = []; // 큐 비우기
     };
 
     const handleSignalNotifyScreenShareAnswer = ({
@@ -992,8 +990,6 @@ export default function Room() {
     if (!myScreenShareStream.current) {
       return;
     }
-
-    console.log("participants", participants);
 
     myScreenShareStream.current.getTracks().forEach((track) => {
       myScreenShareStream.current!.removeTrack(track);
