@@ -7,7 +7,6 @@ import { RoomMemberListResponse, SocketResponse } from "../../types/response";
 import { ResCode } from "../../constants/response";
 import Portal from "../../components/common/Portal";
 import RoomToast from "../../components/Room/RoomToast/RoomToast";
-import Button from "../../components/common/Button/Button";
 import { AuthUser } from "../../types/auth";
 import {
   CallNotifyScreenShareOffData,
@@ -20,15 +19,9 @@ import {
   SignalNotifyIceData,
 } from "../../types/room";
 import { useMediaState } from "../../context/MediaStateProvider";
-import {
-  BsCameraVideo,
-  BsCameraVideoOff,
-  BsMic,
-  BsMicMute,
-  BsLink45Deg,
-} from "react-icons/bs";
 import VideoBox from "../../components/Room/VideoBox/VideoBox";
 import ChatList from "../../components/Room/ChatList/ChatList";
+import ActionBar from "../../components/Room/ActionBar/ActionBar";
 
 type PeerConnections = {
   [userId: string]: RTCPeerConnection;
@@ -54,27 +47,25 @@ export default function Room() {
   const myStream = useRef<MediaStream>();
   const myScreenShareStream = useRef<MediaStream>();
 
+  const rtcRef = useRef<PeerConnections>({});
+  const screenShareRtcRef = useRef<PeerConnections>({});
+
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
   const [mute, setMute] = useState<boolean>(false);
   const [videoOff, setVideoOff] = useState<boolean>(false);
-
-  const [focused, setFocused] = useState<string>();
-
   const [onScreenShare, setOnScreenShare] = useState<ScreenShareState>({});
 
+  const [focused, setFocused] = useState<string>();
   const videoRefs = useRef<{ [userId: string]: HTMLVideoElement | null }>({});
   const screenShareVideoRefs = useRef<{
     [userId: string]: HTMLVideoElement | null;
   }>({});
-
   const [isVideoPlaying, setIsVideoPlaying] = useState<Record<string, boolean>>(
     {}
   );
 
   const [chatList, setChatList] = useState<Chat[]>([]);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-
-  const rtcRef = useRef<PeerConnections>({});
-  const screenShareRtcRef = useRef<PeerConnections>({});
 
   // perfect negotiation
   const makingOffer = useRef<OfferState>({});
@@ -142,6 +133,7 @@ export default function Room() {
     []
   );
 
+  //  ---- ActionBar Functions ----
   const toggleMute = () => {
     myStream.current
       ?.getAudioTracks()
@@ -156,6 +148,123 @@ export default function Room() {
     setVideoOff((prev) => !prev);
   };
 
+  const toggleChat = () => {
+    setOnChat((prev) => !prev);
+  };
+
+  const quitRoom = () => {
+    if (myScreenShareStream.current) {
+      myScreenShareStream.current.getTracks().forEach((track) => track.stop());
+    }
+    navigate("/");
+  };
+
+  const startScreenShare = () => {
+    // if (!screenShareVideoRefs.current[authUser!.userId]) {
+    //   return;
+    // }
+
+    participants.forEach((participant) => {
+      if (participant.userId === authUser?.userId) {
+        return;
+      }
+      // if (!screenShareRtcRef.current[participant.userId]) {
+      screenShareRtcRef.current[participant.userId] =
+        createScreenSharePeerConnectionByUserId(participant.userId);
+      // }
+    });
+
+    navigator.mediaDevices
+      .getDisplayMedia({
+        video: {
+          frameRate: { ideal: 60 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          logicalSurface: true,
+        },
+        audio: true,
+      })
+      .then((stream) => {
+        myScreenShareStream.current = stream;
+        setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: true }));
+
+        screenShareVideoRefs.current[authUser!.userId]!.srcObject = stream;
+
+        Object.values(screenShareRtcRef.current).forEach((rtc) => {
+          stream.getTracks().forEach((track) => {
+            const sender = rtc.addTrack(track, stream);
+            const parameters = sender.getParameters();
+            if (parameters.encodings) {
+              parameters.encodings = parameters.encodings.map(
+                (encoding, index) => {
+                  if (index === 0) {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 1.0,
+                      maxBitrate: 5_000_000,
+                    }; // 고화질
+                  } else if (index === 1) {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 2.0,
+                      maxBitrate: 2_000_000,
+                    }; // 중화질
+                  } else {
+                    return {
+                      ...encoding,
+                      scaleResolutionDownBy: 4.0,
+                      maxBitrate: 800_000,
+                    }; // 저화질
+                  }
+                }
+              );
+              sender.setParameters(parameters);
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        console.error("Error accessing display media:", err);
+      });
+  };
+
+  const stopScreenShare = () => {
+    if (!myScreenShareStream.current) {
+      return;
+    }
+
+    myScreenShareStream.current.getTracks().forEach((track) => {
+      myScreenShareStream.current!.removeTrack(track);
+      track.stop();
+    });
+    screenShareVideoRefs.current[authUser!.userId]!.srcObject = null;
+
+    if (!myStream.current) {
+      setIsVideoPlaying((prev) => ({
+        ...prev,
+        [authUser!.userId]: false,
+      }));
+    }
+
+    socket?.emit(
+      "call_notify_screen_share_off",
+      {
+        roomCode,
+      },
+      (res: SocketResponse) => {}
+    );
+
+    Object.values(screenShareRtcRef.current).forEach((rtc) => {
+      rtc.getSenders().forEach((sender) => {
+        sender.replaceTrack(null);
+        rtc.removeTrack(sender);
+      });
+      rtc.close();
+    });
+
+    setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: false }));
+  };
+
   const handleCopy = () => {
     if (!params.roomCode) return;
 
@@ -163,107 +272,21 @@ export default function Room() {
       alert("링크가 복사되었습니다.");
     });
   };
+  //  ---- ---- ---- ---- ---- ----
 
-  useEffect(() => {
-    if (!authUser) {
-      navigate("/login");
-    }
-  }, [authUser, navigate]);
-
-  useEffect(() => {
-    if (!socket) {
-      navigate("/");
-    }
-  }, [socket, navigate]);
-
-  useEffect(() => {
-    // 미디어 장치 스트림 받아오기 ( 장치 변경 포함 )
-    if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
-      const constraints: MediaStreamConstraints = {
-        video: false,
-        audio: false,
-      };
-
-      if (mediaState.camera.deviceId) {
-        constraints.video = {
-          deviceId: { exact: mediaState.camera.deviceId },
-        };
-      }
-
-      if (mediaState.microphone.deviceId) {
-        constraints.audio = {
-          deviceId: { exact: mediaState.microphone.deviceId },
-        };
-      }
-
-      navigator.mediaDevices
-        .getUserMedia(constraints)
-        .then((stream) => {
-          Object.values(rtcRef.current).forEach((rtc) => {
-            if (myStream.current) {
-              // 카메라 및 마이크를 사용 중이었을 경우(stream 존재), addTrack 대신 replaceTrack 사용
-              const videoSender = rtc
-                .getSenders()
-                .find((sender) => sender.track?.kind === "video");
-
-              const audioSender = rtc
-                .getSenders()
-                .find((sender) => sender.track?.kind === "audio");
-
-              if (videoSender) {
-                videoSender.replaceTrack(stream.getVideoTracks()[0]);
-              }
-
-              if (audioSender) {
-                audioSender.replaceTrack(stream.getAudioTracks()[0]);
-              }
-            } else {
-              stream.getTracks().forEach((track) => {
-                rtc.addTrack(track, stream);
-              });
-            }
-          });
-
-          myStream.current = stream;
-          videoRefs.current[authUser!.userId]!.srcObject = stream;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-    }
-  }, [mediaState, authUser, participants]);
-
-  // Cleanup
-  useEffect(() => {
-    const connections = rtcRef.current;
-    const screenShareConnections = screenShareRtcRef.current;
-    const stream = myStream.current;
-    const screenShareStream = myScreenShareStream.current;
-    return () => {
-      if (connections) {
-        Object.values(connections).forEach((rtc) => {
-          rtc.close();
-        });
-      }
-
-      if (screenShareConnections) {
-        Object.values(screenShareConnections).forEach((rtc) => {
-          rtc.close();
-        });
-      }
-
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-
-      if (screenShareStream) {
-        screenShareStream.getTracks().forEach((track) => track.stop());
-      }
-
-      socket?.removeAllListeners();
-      socket?.disconnect();
-    };
-  }, [socket]);
+  //  ---- ChatList Functions ----
+  const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const { message } = Object.fromEntries(new FormData(form));
+    socket?.emit(
+      "chat_send_message",
+      { roomCode, message },
+      (_: SocketResponse) => {}
+    );
+    form.reset();
+  };
+  //  ---- ---- ---- ---- ---- ---
 
   const createPeerConnectionByUserId = (userId: string) => {
     const newPeerConnection = new RTCPeerConnection({
@@ -452,6 +475,121 @@ export default function Room() {
 
     return newPeerConnection;
   };
+
+  const handleAcceptJoin = (userId: string, accept: boolean) => {
+    socket?.emit(
+      "room_decide_join_from_host",
+      {
+        roomCode,
+        userId,
+        isApprove: accept,
+      },
+      (_: SocketResponse) => {}
+    );
+    setToastMessage("");
+    setWaitingUser(undefined);
+  };
+
+  useEffect(() => {
+    if (!authUser) {
+      navigate("/login");
+    }
+  }, [authUser, navigate]);
+
+  useEffect(() => {
+    if (!socket) {
+      navigate("/");
+    }
+  }, [socket, navigate]);
+
+  useEffect(() => {
+    // 미디어 장치 스트림 받아오기 ( 장치 변경 포함 )
+    if (mediaState.camera.deviceId || mediaState.microphone.deviceId) {
+      const constraints: MediaStreamConstraints = {
+        video: false,
+        audio: false,
+      };
+
+      if (mediaState.camera.deviceId) {
+        constraints.video = {
+          deviceId: { exact: mediaState.camera.deviceId },
+        };
+      }
+
+      if (mediaState.microphone.deviceId) {
+        constraints.audio = {
+          deviceId: { exact: mediaState.microphone.deviceId },
+        };
+      }
+
+      navigator.mediaDevices
+        .getUserMedia(constraints)
+        .then((stream) => {
+          Object.values(rtcRef.current).forEach((rtc) => {
+            if (myStream.current) {
+              // 카메라 및 마이크를 사용 중이었을 경우(stream 존재), addTrack 대신 replaceTrack 사용
+              const videoSender = rtc
+                .getSenders()
+                .find((sender) => sender.track?.kind === "video");
+
+              const audioSender = rtc
+                .getSenders()
+                .find((sender) => sender.track?.kind === "audio");
+
+              if (videoSender) {
+                videoSender.replaceTrack(stream.getVideoTracks()[0]);
+              }
+
+              if (audioSender) {
+                audioSender.replaceTrack(stream.getAudioTracks()[0]);
+              }
+            } else {
+              stream.getTracks().forEach((track) => {
+                rtc.addTrack(track, stream);
+              });
+            }
+          });
+
+          myStream.current = stream;
+          videoRefs.current[authUser!.userId]!.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+  }, [mediaState, authUser, participants]);
+
+  // Cleanup
+  useEffect(() => {
+    const connections = rtcRef.current;
+    const screenShareConnections = screenShareRtcRef.current;
+    const stream = myStream.current;
+    const screenShareStream = myScreenShareStream.current;
+    return () => {
+      if (connections) {
+        Object.values(connections).forEach((rtc) => {
+          rtc.close();
+        });
+      }
+
+      if (screenShareConnections) {
+        Object.values(screenShareConnections).forEach((rtc) => {
+          rtc.close();
+        });
+      }
+
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      if (screenShareStream) {
+        screenShareStream.getTracks().forEach((track) => track.stop());
+      }
+
+      socket?.removeAllListeners();
+      socket?.disconnect();
+    };
+  }, [socket]);
 
   // 방 입장 시, 방 참가자 목록 요청 및 PeerConnection 생성
   useEffect(() => {
@@ -918,145 +1056,6 @@ export default function Room() {
     };
   }, [socket, waitingUser]);
 
-  const startScreenShare = () => {
-    // if (!screenShareVideoRefs.current[authUser!.userId]) {
-    //   return;
-    // }
-
-    participants.forEach((participant) => {
-      if (participant.userId === authUser?.userId) {
-        return;
-      }
-      // if (!screenShareRtcRef.current[participant.userId]) {
-      screenShareRtcRef.current[participant.userId] =
-        createScreenSharePeerConnectionByUserId(participant.userId);
-      // }
-    });
-
-    navigator.mediaDevices
-      .getDisplayMedia({
-        video: {
-          frameRate: { ideal: 60 },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          logicalSurface: true,
-        },
-        audio: true,
-      })
-      .then((stream) => {
-        myScreenShareStream.current = stream;
-        setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: true }));
-
-        screenShareVideoRefs.current[authUser!.userId]!.srcObject = stream;
-
-        Object.values(screenShareRtcRef.current).forEach((rtc) => {
-          stream.getTracks().forEach((track) => {
-            const sender = rtc.addTrack(track, stream);
-            const parameters = sender.getParameters();
-            if (parameters.encodings) {
-              parameters.encodings = parameters.encodings.map(
-                (encoding, index) => {
-                  if (index === 0) {
-                    return {
-                      ...encoding,
-                      scaleResolutionDownBy: 1.0,
-                      maxBitrate: 5_000_000,
-                    }; // 고화질
-                  } else if (index === 1) {
-                    return {
-                      ...encoding,
-                      scaleResolutionDownBy: 2.0,
-                      maxBitrate: 2_000_000,
-                    }; // 중화질
-                  } else {
-                    return {
-                      ...encoding,
-                      scaleResolutionDownBy: 4.0,
-                      maxBitrate: 800_000,
-                    }; // 저화질
-                  }
-                }
-              );
-              sender.setParameters(parameters);
-            }
-          });
-        });
-      })
-      .catch((err) => {
-        console.error("Error accessing display media:", err);
-      });
-  };
-
-  const stopScreenShare = () => {
-    if (!myScreenShareStream.current) {
-      return;
-    }
-
-    myScreenShareStream.current.getTracks().forEach((track) => {
-      myScreenShareStream.current!.removeTrack(track);
-      track.stop();
-    });
-    screenShareVideoRefs.current[authUser!.userId]!.srcObject = null;
-
-    if (!myStream.current) {
-      setIsVideoPlaying((prev) => ({
-        ...prev,
-        [authUser!.userId]: false,
-      }));
-    }
-
-    socket?.emit(
-      "call_notify_screen_share_off",
-      {
-        roomCode,
-      },
-      (res: SocketResponse) => {}
-    );
-
-    Object.values(screenShareRtcRef.current).forEach((rtc) => {
-      rtc.getSenders().forEach((sender) => {
-        sender.replaceTrack(null);
-        rtc.removeTrack(sender);
-      });
-      rtc.close();
-    });
-
-    setOnScreenShare((prev) => ({ ...prev, [authUser!.userId]: false }));
-  };
-
-  const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const { message } = Object.fromEntries(new FormData(form));
-    socket?.emit(
-      "chat_send_message",
-      { roomCode, message },
-      (_: SocketResponse) => {}
-    );
-    form.reset();
-  };
-
-  const handleAcceptJoin = (userId: string, accept: boolean) => {
-    socket?.emit(
-      "room_decide_join_from_host",
-      {
-        roomCode,
-        userId,
-        isApprove: accept,
-      },
-      (_: SocketResponse) => {}
-    );
-    setToastMessage("");
-    setWaitingUser(undefined);
-  };
-
-  const quitRoom = () => {
-    if (myScreenShareStream.current) {
-      myScreenShareStream.current.getTracks().forEach((track) => track.stop());
-    }
-    navigate("/");
-  };
-
   return (
     <main className={styles.container}>
       <div className={styles.videoSection}>
@@ -1074,38 +1073,19 @@ export default function Room() {
             />
           ))}
         </div>
-        <div className={styles.actionBar}>
-          <button className={styles.iconContainer} onClick={toggleVideo}>
-            {videoOff ? <BsCameraVideoOff /> : <BsCameraVideo />}
-          </button>
-          <button className={styles.iconContainer} onClick={toggleMute}>
-            {mute ? <BsMicMute /> : <BsMic />}
-          </button>
-          <Button style="primary" size="sm" onClick={quitRoom}>
-            통화 종료
-          </Button>
-          <Button
-            style="secondary"
-            size="sm"
-            onClick={
-              onScreenShare[authUser!.userId]
-                ? stopScreenShare
-                : startScreenShare
-            }
-          >
-            {onScreenShare[authUser!.userId] ? "화면 공유 중지" : "화면 공유"}
-          </Button>
-          <Button
-            style="secondary"
-            size="sm"
-            onClick={() => setOnChat(!onChat)}
-          >
-            채팅
-          </Button>
-          <button className={styles.link} onClick={handleCopy}>
-            <BsLink45Deg />
-          </button>
-        </div>
+        <ActionBar
+          authUser={authUser}
+          onScreenShare={onScreenShare}
+          mute={mute}
+          videoOff={videoOff}
+          toggleMute={toggleMute}
+          toggleVideo={toggleVideo}
+          quitRoom={quitRoom}
+          startScreenShare={startScreenShare}
+          stopScreenShare={stopScreenShare}
+          toggleChat={toggleChat}
+          handleCopy={handleCopy}
+        />
       </div>
       {onChat && (
         <div className={styles.chatSection}>
