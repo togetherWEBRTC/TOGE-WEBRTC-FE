@@ -1,0 +1,50 @@
+.chatList {
+  flex: 1 1 auto;
+  color: var(--white);
+  list-style: none;
+  padding: 10px;
+  outline: none;
+}
+
+.chatList li {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inputContainer {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.inputContainer input {
+  border-radius: 4px;
+  padding-left: 10px;
+  height: 40px;
+  outline: none;
+  border: none;
+  margin-bottom: 10px;
+}
+
+.inputContainer button {
+  border-radius: 4px;
+  height: 30px;
+  width: 40px;
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  justify-self: end;
+  align-self: end;
+  background-color: var(--secondary-300);
+  outline: none;
+  border: none;
+  cursor: pointer;
+}
+
+.inputContainer button:hover {
+  background-color: var(--secondary-400);
+}
