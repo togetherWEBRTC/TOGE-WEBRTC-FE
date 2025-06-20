@@ -14,7 +14,6 @@ import {
   Participant,
   RoomNotifyUpdateData,
   RoomNotifyWaitData,
-  RtcReadyData,
   SignalNotifyData,
   SignalNotifyIceData,
 } from "../../types/room";
@@ -69,12 +68,8 @@ export default function Room() {
 
   // perfect negotiation
   const makingOffer = useRef<OfferState>({});
-  const ignoreOffer = useRef<OfferState>({});
 
   const makingScreenShareOffer = useRef<OfferState>({});
-
-  // test ice queue
-  // const candidateQueue = useRef<{ [userId: string]: RTCIceCandidate[] }>({});
 
   // 현재 참여
   const [waitingUser, setWaitingUser] = useState<AuthUser>();
@@ -303,23 +298,21 @@ export default function Room() {
     });
 
     makingOffer.current[userId] = false;
-    ignoreOffer.current[userId] = false;
 
     newPeerConnection.ontrack = (e) => {
-      // 트랙 제거 시 ( 카메라를 사용하지 않는 상태에서 화면 공유 종료 시, 비디오 트랙 제거 )
-      e.streams[0].onremovetrack = () => {
-        // 남아 있는 트랙이 없는 경우( 마이크 사용 X ) srcObject 초기화
-        const remainingTracks = e.streams[0].getTracks();
-        if (remainingTracks.length === 0) {
-          setIsVideoPlaying((prev) => ({
-            ...prev,
-            [userId]: false,
-          }));
-          videoRefs.current[userId]!.srcObject = null;
-        } else {
-          console.log(`Remaining tracks for ${userId}:`, remainingTracks);
-        }
-      };
+      // e.streams[0].onremovetrack = () => {
+      //   // 남아 있는 트랙이 없는 경우( 마이크 사용 X ) srcObject 초기화
+      //   const remainingTracks = e.streams[0].getTracks();
+      //   if (remainingTracks.length === 0) {
+      //     setIsVideoPlaying((prev) => ({
+      //       ...prev,
+      //       [userId]: false,
+      //     }));
+      //     videoRefs.current[userId]!.srcObject = null;
+      //   } else {
+      //     console.log(`Remaining tracks for ${userId}:`, remainingTracks);
+      //   }
+      // };
       videoRefs.current[userId]!.srcObject = e.streams[0];
     };
 
@@ -344,9 +337,6 @@ export default function Room() {
     };
 
     newPeerConnection.onnegotiationneeded = async () => {
-      // if (newPeerConnection.signalingState !== "stable") {
-      //   return;
-      // }
       const offer = await newPeerConnection.createOffer();
 
       try {
@@ -606,10 +596,6 @@ export default function Room() {
           );
         });
 
-        if (res.roomMemberList.length > 1) {
-          socket?.emit("rtc_ready", { roomCode }, (res: SocketResponse) => {});
-        }
-
         setParticipants(res.roomMemberList);
       }
     };
@@ -707,42 +693,6 @@ export default function Room() {
       setParticipants(participants);
     };
 
-    const handleRtcReady = async ({ userId }: RtcReadyData) => {
-      if (!rtcRef.current[userId]) {
-        console.log(
-          "rtc_ready 인데, rtcRef.current[userId] 없어서 만들도록 하겠음 ",
-          userId
-        );
-
-        rtcRef.current[userId] = createPeerConnectionByUserId(userId);
-
-        myStream.current?.getTracks().forEach((track) => {
-          rtcRef.current[userId].addTrack(track, myStream.current!);
-        });
-      }
-      const rtc = rtcRef.current[userId];
-
-      try {
-        makingOffer.current[userId] = true;
-        // offer 생성 및 전송
-        const offer = await rtc.createOffer();
-        await rtc.setLocalDescription(offer);
-        socket.emit(
-          "signal_send_offer",
-          {
-            roomCode,
-            toUserId: userId,
-            sdp: offer.sdp,
-          },
-          (res: SocketResponse) => {}
-        );
-      } catch (error) {
-        console.error("Error creating offer:", error);
-      } finally {
-        makingOffer.current[userId] = false;
-      }
-    };
-
     const handleSignalNotifyIce = ({
       fromUserId,
       candidate,
@@ -754,9 +704,6 @@ export default function Room() {
         sdpMid,
         sdpMLineIndex,
       });
-
-      // test ice queue
-      // candidateQueue.current[fromUserId].push(ice);
 
       rtcRef.current[fromUserId].addIceCandidate(ice).catch((error) => {
         console.log("ice candidate 추가 실패:", ice);
@@ -795,33 +742,22 @@ export default function Room() {
         return;
       }
 
-      if (!rtc) {
-        console.error("PeerConnection not found for userId:", fromUserId);
-        return;
+      if (!rtcRef.current[fromUserId]) {
+        rtcRef.current[fromUserId] = createPeerConnectionByUserId(fromUserId);
       }
 
       const isPolite = authUser.userId > fromUserId;
       const isCollision =
         makingOffer.current[fromUserId] || rtc.signalingState !== "stable";
 
-      ignoreOffer.current[fromUserId] = !isPolite && isCollision;
+      const ignoreOffer = !isPolite && isCollision;
 
-      if (ignoreOffer.current[fromUserId]) {
+      if (ignoreOffer) {
         console.log("Ignoring offer from:", fromUserId);
         return;
       }
-
       try {
         await rtc.setRemoteDescription({ type: "offer", sdp });
-
-        // // test ice queue
-        // candidateQueue.current[fromUserId]?.forEach((candidate) => {
-        //   rtc.addIceCandidate(candidate).catch((error) => {
-        //     console.error("Error adding queued ICE candidate:", error);
-        //   });
-        // });
-        // candidateQueue.current[fromUserId] = []; // 큐 비우기
-
         const answer = await rtc.createAnswer();
         await rtc.setLocalDescription(answer);
         socket.emit(
@@ -888,6 +824,7 @@ export default function Room() {
       sdp,
     }: SignalNotifyData) => {
       const rtc = rtcRef.current[fromUserId];
+
       if (rtc.signalingState !== "have-local-offer") {
         return;
       }
@@ -900,14 +837,6 @@ export default function Room() {
         .catch((error) => {
           console.error("Error setting remote description:", error);
         });
-
-      // // test ice queue
-      // candidateQueue.current[fromUserId]?.forEach((candidate) => {
-      //   rtcRef.current[fromUserId].addIceCandidate(candidate).catch((error) => {
-      //     console.error("Error adding queued ICE candidate:", error);
-      //   });
-      // });
-      // candidateQueue.current[fromUserId] = []; // 큐 비우기
     };
 
     const handleSignalNotifyScreenShareAnswer = ({
@@ -965,9 +894,6 @@ export default function Room() {
       handleRoomNotifyUpdateParticipant
     );
 
-    // icecandidate 제공 및 offer
-    socket.on("rtc_ready", handleRtcReady);
-
     // icecandidate 수신
     socket.on("signal_notify_ice", handleSignalNotifyIce);
     socket.on(
@@ -1001,7 +927,7 @@ export default function Room() {
         "room_notify_update_participant",
         handleRoomNotifyUpdateParticipant
       );
-      socket.off("rtc_ready", handleRtcReady);
+      // socket.off("rtc_ready", handleRtcReady);
       socket.off("signal_notify_ice", handleSignalNotifyIce);
       socket.off(
         "signal_notify_ice_screen_share",
@@ -1020,7 +946,7 @@ export default function Room() {
       );
       socket.off("room_notify_update_owner", handleRoomNotifyUpdateOwner);
     };
-  }, [socket, roomCode]);
+  }, [socket, roomCode, authUser]);
 
   // deps 에 waitingUser 없을 시, 클로저 문제로 인해 waitingUser가 undefined로 인식되어 useEffect가 실행되지 않음(클로저 트랩)
   useEffect(() => {
