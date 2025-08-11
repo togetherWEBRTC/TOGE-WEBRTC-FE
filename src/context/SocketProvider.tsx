@@ -25,5 +25,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useSocket = () => {
-  return useContext(SocketContext);
+  const socket = useContext(SocketContext);
+  if (!socket) {
+    throw new Error("Socket이 존재하지 않습니다.");
+  }
+  return socket;
 };
