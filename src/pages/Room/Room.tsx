@@ -402,7 +402,7 @@ export default function Room() {
       socket?.removeAllListeners();
       socket?.disconnect();
     };
-  }, [socket]);
+  }, [socket, rtcRef, screenShareRtcRef]);
 
   // 방 입장 시, 방 참가자 목록 요청 및 PeerConnection 생성
   useEffect(() => {
@@ -425,6 +425,7 @@ export default function Room() {
     );
   }, [socket, roomCode, authUser]);
 
+  // 소켓 이벤트
   useEffect(() => {
     if (!socket) return;
 
@@ -767,7 +768,15 @@ export default function Room() {
       );
       socket.off("room_notify_update_owner", handleRoomNotifyUpdateOwner);
     };
-  }, [socket, roomCode, authUser]);
+  }, [
+    socket,
+    roomCode,
+    authUser,
+    rtcRef,
+    screenShareRtcRef,
+    createPeerConnectionByUserId,
+    createScreenSharePeerConnectionByUserId,
+  ]);
 
   // deps 에 waitingUser 없을 시, 클로저 문제로 인해 waitingUser가 undefined로 인식되어 useEffect가 실행되지 않음(클로저 트랩)
   useEffect(() => {

@@ -45,6 +45,12 @@ export default function VideoBox(props: Props) {
   };
 
   useEffect(() => {
+    return () => {
+      setFocused(undefined);
+    };
+  }, [setFocused]);
+
+  useEffect(() => {
     const container = videoBoxRef.current;
     if (!container) return;
 
@@ -97,6 +103,9 @@ export default function VideoBox(props: Props) {
         isPortrait
       )}`}
       onClick={() => {
+        if (focused === participant.userId) {
+          return;
+        }
         setFocused(participant.userId);
       }}
     >
