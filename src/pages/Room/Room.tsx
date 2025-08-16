@@ -75,8 +75,15 @@ export default function Room() {
 
   // perfect negotiation
   const makingOffer = useRef<OfferState>({});
-
   const makingScreenShareOffer = useRef<OfferState>({});
+
+  // Canditate Queueing
+  const candidateQueue = useRef<{ [userId: string]: RTCIceCandidateInit[] }>(
+    {}
+  );
+  const screenShareCandidateQueue = useRef<{
+    [userId: string]: RTCIceCandidateInit[];
+  }>({});
 
   // 현재 참여
   const [waitingUser, setWaitingUser] = useState<AuthUser>();
@@ -98,6 +105,10 @@ export default function Room() {
 
       if (node) {
         videoRefs.current[userId] = node;
+
+        if (authUser?.userId === userId) {
+          node.muted = true;
+        }
 
         if (authUser?.userId !== userId && !rtcRef.current[userId]) {
           rtcRef.current[userId] = createPeerConnectionByUserId(userId, node);
@@ -128,6 +139,10 @@ export default function Room() {
 
       if (node) {
         screenShareVideoRefs.current[userId] = node;
+
+        if (authUser?.userId === userId) {
+          node.muted = true;
+        }
 
         screenShareVideoRefs.current[userId].addEventListener(
           "play",
@@ -518,6 +533,17 @@ export default function Room() {
         sdpMLineIndex,
       });
 
+      // Candidate Queueing
+      const rtc = rtcRef.current[fromUserId];
+      if (!rtc.remoteDescription || !rtc.remoteDescription.type) {
+        // 아직 remote description이 없으면 큐에 저장
+        if (!candidateQueue.current[fromUserId]) {
+          candidateQueue.current[fromUserId] = [];
+        }
+        candidateQueue.current[fromUserId].push(ice);
+        return;
+      }
+
       rtcRef.current[fromUserId].addIceCandidate(ice).catch((error) => {
         console.log("ice candidate 추가 실패:", ice);
         console.error("Error adding ICE candidate:", error);
@@ -538,13 +564,24 @@ export default function Room() {
           );
       }
 
-      screenShareRtcRef.current[fromUserId].addIceCandidate(
-        new RTCIceCandidate({
-          candidate,
-          sdpMid,
-          sdpMLineIndex,
-        })
-      );
+      const ice = new RTCIceCandidate({
+        candidate,
+        sdpMid,
+        sdpMLineIndex,
+      });
+
+      // Candidate Queueing
+      const rtc = screenShareRtcRef.current[fromUserId];
+      if (!rtc.remoteDescription || !rtc.remoteDescription.type) {
+        // 아직 remote description이 없으면 큐에 저장
+        if (!screenShareCandidateQueue.current[fromUserId]) {
+          screenShareCandidateQueue.current[fromUserId] = [];
+        }
+        screenShareCandidateQueue.current[fromUserId].push(ice);
+        return;
+      }
+
+      screenShareRtcRef.current[fromUserId].addIceCandidate(ice);
     };
 
     const handleSignalNotifyOffer = async ({
@@ -577,6 +614,18 @@ export default function Room() {
       }
       try {
         await rtc.setRemoteDescription({ type: "offer", sdp });
+
+        // Candidate Queueing
+        if (candidateQueue.current[fromUserId]) {
+          candidateQueue.current[fromUserId].forEach((ice) => {
+            rtc.addIceCandidate(ice).catch((error) => {
+              console.log("ice candidate 추가 실패:", ice);
+              console.error("Error adding ICE candidate:", error);
+            });
+          });
+          candidateQueue.current[fromUserId] = [];
+        }
+
         const answer = await rtc.createAnswer();
         await rtc.setLocalDescription(answer);
         socket.emit(
@@ -625,6 +674,17 @@ export default function Room() {
       try {
         await rtc.setRemoteDescription({ type: "offer", sdp });
 
+        // Candidate Queueing
+        if (screenShareCandidateQueue.current[fromUserId]) {
+          screenShareCandidateQueue.current[fromUserId].forEach((ice) => {
+            rtc.addIceCandidate(ice).catch((error) => {
+              console.log("ice candidate 추가 실패:", ice);
+              console.error("Error adding ICE candidate:", error);
+            });
+          });
+          screenShareCandidateQueue.current[fromUserId] = [];
+        }
+
         const answer = await rtc.createAnswer();
         await rtc.setLocalDescription(answer);
         socket.emit(
@@ -659,13 +719,25 @@ export default function Room() {
         .catch((error) => {
           console.error("Error setting remote description:", error);
         });
+
+      // Candidate Queueing
+      if (candidateQueue.current[fromUserId]) {
+        candidateQueue.current[fromUserId].forEach((ice) => {
+          rtc.addIceCandidate(ice).catch((error) => {
+            console.log("ice candidate 추가 실패:", ice);
+            console.error("Error adding ICE candidate:", error);
+          });
+        });
+        candidateQueue.current[fromUserId] = [];
+      }
     };
 
     const handleSignalNotifyScreenShareAnswer = ({
       fromUserId,
       sdp,
     }: SignalNotifyData) => {
-      screenShareRtcRef.current[fromUserId]
+      const rtc = screenShareRtcRef.current[fromUserId];
+      rtc
         .setRemoteDescription({
           type: "answer",
           sdp,
@@ -676,6 +748,17 @@ export default function Room() {
             error
           );
         });
+
+      // Candidate Queueing
+      if (screenShareCandidateQueue.current[fromUserId]) {
+        screenShareCandidateQueue.current[fromUserId].forEach((ice) => {
+          rtc.addIceCandidate(ice).catch((error) => {
+            console.log("ice candidate 추가 실패:", ice);
+            console.error("Error adding ICE candidate:", error);
+          });
+        });
+        screenShareCandidateQueue.current[fromUserId] = [];
+      }
     };
 
     const handleNotifyScreenShareOff = ({

@@ -47,11 +47,19 @@ export default function useRoomPeerConnections({
     makingOffer.current[userId] = false;
 
     newPeerConnection.ontrack = (e) => {
-      if (videoEl) {
-        videoEl.srcObject = e.streams[0];
-      } else {
+      // if (videoEl) {
+      //   videoEl.srcObject = e.streams[0];
+      // } else {
+      //   console.error("Video element is not defined for userId:", userId);
+      // }
+
+      // TEST
+      if (!videoEl) {
         console.error("Video element is not defined for userId:", userId);
       }
+      const remoteStream = new MediaStream();
+      e.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
+      videoEl.srcObject = remoteStream;
     };
 
     newPeerConnection.onicecandidate = (e) => {
@@ -142,14 +150,23 @@ export default function useRoomPeerConnections({
       //   }));
       //   screenShareVideoRefs.current[userId]!.srcObject = null;
       // };
-      if (videoEl) {
-        videoEl.srcObject = e.streams[0];
-      } else {
-        console.error(
-          "Screen Share : Video element is not defined for userId:",
-          userId
-        );
+
+      // if (videoEl) {
+      //   videoEl.srcObject = e.streams[0];
+      // } else {
+      //   console.error(
+      //     "Screen Share : Video element is not defined for userId:",
+      //     userId
+      //   );
+      // }
+
+      // TEST
+      if (!videoEl) {
+        console.error("Video element is not defined for userId:", userId);
       }
+      const remoteStream = new MediaStream();
+      e.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
+      videoEl.srcObject = remoteStream;
     };
 
     newPeerConnection.onicecandidate = (e) => {
