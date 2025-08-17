@@ -201,8 +201,8 @@ export default function Room() {
       .getDisplayMedia({
         video: {
           frameRate: { ideal: 60 },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 3840 },
+          height: { ideal: 2160 },
           logicalSurface: true,
         },
         audio: true,
@@ -224,19 +224,19 @@ export default function Room() {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 1.0,
-                      maxBitrate: 5_000_000,
+                      maxBitrate: 12_000_000,
                     }; // 고화질
                   } else if (index === 1) {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 2.0,
-                      maxBitrate: 2_000_000,
+                      maxBitrate: 6_000_000,
                     }; // 중화질
                   } else {
                     return {
                       ...encoding,
                       scaleResolutionDownBy: 4.0,
-                      maxBitrate: 800_000,
+                      maxBitrate: 3_000_000,
                     }; // 저화질
                   }
                 }
