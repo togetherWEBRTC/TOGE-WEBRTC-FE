@@ -92,7 +92,7 @@ export default function Home() {
 
     // 방 입장 승인 알림
     socket.on("room_notify_decide_join_host", (res) => {
-      // socket.off("room_notify_decide_join_host");
+      socket.off("room_notify_decide_join_host");
       if (res.isApprove) {
         navigate(`/room/${inputRef.current?.value}`);
       } else {
