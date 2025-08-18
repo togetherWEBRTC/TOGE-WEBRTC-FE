@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 type Props = {
@@ -6,5 +6,16 @@ type Props = {
 };
 
 export default function Portal({ children }: Props) {
-  return createPortal(children, document.body);
+  const elRef = useRef(document.createElement("div"));
+
+  useEffect(() => {
+    const el = elRef.current;
+
+    document.body.appendChild(el);
+    return () => {
+      document.body.removeChild(el);
+    };
+  }, []);
+
+  return createPortal(children, elRef.current);
 }
