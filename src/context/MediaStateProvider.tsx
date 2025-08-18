@@ -48,53 +48,34 @@ export default function MediaStateProvider({
 }) {
   // mediaState: 현재 미디어 권한 상태, 현재 사용 장치 정보
   const [mediaState, setMediaState] = useState<MediaState>(initialMediaState);
+
   useEffect(() => {
-    async function getPermissions() {
+    async function getInitialPermissions() {
       try {
-        const micPermission = await navigator.permissions.query({
+        const micStatus = await navigator.permissions.query({
           name: "microphone" as PermissionName,
         });
-        const camPermission = await navigator.permissions.query({
+        const camStatus = await navigator.permissions.query({
           name: "camera" as PermissionName,
         });
-        const displayCapturePermission = await navigator.permissions.query({
+        const displayStatus = await navigator.permissions.query({
           name: "display-capture" as PermissionName,
         });
 
         setMediaState({
-          microphone: { permission: micPermission.state, deviceId: undefined },
-          camera: { permission: camPermission.state, deviceId: undefined },
+          microphone: { permission: micStatus.state, deviceId: undefined },
+          camera: { permission: camStatus.state, deviceId: undefined },
           displayCapture: {
-            permission: displayCapturePermission.state,
+            permission: displayStatus.state,
             deviceId: undefined,
           },
         });
-
-        micPermission.onchange = () =>
-          setMediaState((prev) => ({
-            ...prev,
-            microphone: { permission: micPermission.state },
-          }));
-
-        camPermission.onchange = () =>
-          setMediaState((prev) => ({
-            ...prev,
-            camera: { permission: camPermission.state },
-          }));
-
-        displayCapturePermission.onchange = () =>
-          setMediaState((prev) => ({
-            ...prev,
-            displayCapturerophone: {
-              permission: displayCapturePermission.state,
-            },
-          }));
       } catch (error) {
-        console.error("권한 확인 중 오류 발생:", error);
+        console.error("초기 권한 확인 중 오류 발생:", error);
       }
     }
 
-    getPermissions();
+    getInitialPermissions();
   }, []);
 
   return (
@@ -192,5 +173,5 @@ export const useMediaState = () => {
     }
   };
 
-  return { mediaState, requestPermission, selectDevice };
+  return { mediaState, requestPermission, selectDevice, setMediaState };
 };

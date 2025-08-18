@@ -12,16 +12,63 @@ type Props = {
 };
 
 export default function PermissionModal({ onClose }: Props) {
-  const { mediaState, requestPermission, selectDevice } = useMediaState();
+  const { mediaState, requestPermission, selectDevice, setMediaState } =
+    useMediaState();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>();
 
   useEffect(() => {
+    let micPermissionStatus: PermissionStatus | null = null;
+    let camPermissionStatus: PermissionStatus | null = null;
+
     async function getDevices() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       setDevices(devices);
     }
     getDevices();
-  }, [mediaState]);
+
+    const handleMicPermissionChange = () => {
+      if (micPermissionStatus) {
+        setMediaState((prev) => ({
+          ...prev,
+          microphone: { permission: micPermissionStatus?.state || "prompt" },
+        }));
+      }
+      getDevices();
+    };
+
+    const handleCamPermissionChange = () => {
+      if (camPermissionStatus) {
+        setMediaState((prev) => ({
+          ...prev,
+          camera: { permission: camPermissionStatus?.state || "prompt" },
+        }));
+      }
+      getDevices();
+    };
+
+    const setupPermissionListeners = async () => {
+      micPermissionStatus = await navigator.permissions.query({
+        name: "microphone",
+      });
+      camPermissionStatus = await navigator.permissions.query({
+        name: "camera",
+      });
+
+      micPermissionStatus.onchange = handleMicPermissionChange;
+      camPermissionStatus.onchange = handleCamPermissionChange;
+    };
+
+    setupPermissionListeners();
+
+    return () => {
+      if (micPermissionStatus) {
+        micPermissionStatus.onchange = null;
+      }
+      if (camPermissionStatus) {
+        camPermissionStatus.onchange = null;
+      }
+    };
+  }, [setMediaState]);
 
   const micPermission = useMemo(
     () => mediaState.microphone.permission,
