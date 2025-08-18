@@ -71,6 +71,22 @@ export default function Room() {
     {}
   );
 
+  const videoHandlersRef = useRef<{
+    [key: string]: {
+      handlePlay: () => void;
+      handlePause: () => void;
+      handleEnded: () => void;
+    };
+  }>({});
+
+  const screenShareVideoHandlersRef = useRef<{
+    [key: string]: {
+      handlePlay: () => void;
+      handlePause: () => void;
+      handleEnded: () => void;
+    };
+  }>({});
+
   const [chatList, setChatList] = useState<Chat[]>([]);
 
   // perfect negotiation
@@ -95,20 +111,26 @@ export default function Room() {
 
   const setVideoRef = useCallback(
     (userId: string) => (node: HTMLVideoElement | null) => {
-      // 비디오 재생 상태 확인을 통한 대체 이미지 표시를 위한 코드
-      const handlePlay = () =>
-        setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
-      const handlePause = () =>
-        setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
-      const handleEnded = () =>
-        setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
-
       if (node) {
         videoRefs.current[userId] = node;
 
         if (authUser?.userId === userId) {
           node.muted = true;
         }
+
+        // 비디오 재생 상태 확인을 통한 대체 이미지 표시를 위한 코드
+        const handlePlay = () =>
+          setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
+        const handlePause = () =>
+          setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
+        const handleEnded = () =>
+          setIsVideoPlaying((prev) => ({ ...prev, [userId]: false }));
+
+        videoHandlersRef.current[userId] = {
+          handlePlay,
+          handlePause,
+          handleEnded,
+        };
 
         if (authUser?.userId !== userId && !rtcRef.current[userId]) {
           rtcRef.current[userId] = createPeerConnectionByUserId(userId, node);
@@ -121,22 +143,29 @@ export default function Room() {
         videoRefs.current[userId].addEventListener("pause", handlePause);
         videoRefs.current[userId].addEventListener("ended", handleEnded);
       } else {
-        videoRefs.current[userId]?.removeEventListener("play", handlePlay);
-        videoRefs.current[userId]?.removeEventListener("pause", handlePause);
-        videoRefs.current[userId]?.removeEventListener("ended", handleEnded);
+        if (videoRefs.current[userId] && videoHandlersRef.current[userId]) {
+          videoRefs.current[userId].removeEventListener(
+            "play",
+            videoHandlersRef.current[userId].handlePlay
+          );
+          videoRefs.current[userId].removeEventListener(
+            "pause",
+            videoHandlersRef.current[userId].handlePause
+          );
+          videoRefs.current[userId].removeEventListener(
+            "ended",
+            videoHandlersRef.current[userId].handleEnded
+          );
+        }
+        delete videoHandlersRef.current[userId];
         delete videoRefs.current[userId];
       }
     },
-    []
+    [authUser, createPeerConnectionByUserId, rtcRef]
   );
 
   const setScreenShareVideoRef = useCallback(
     (userId: string) => (node: HTMLVideoElement | null) => {
-      const handlePlay = () => {
-        setOnScreenShare((prev) => ({ ...prev, [userId]: true }));
-        setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
-      };
-
       if (node) {
         screenShareVideoRefs.current[userId] = node;
 
@@ -144,19 +173,31 @@ export default function Room() {
           node.muted = true;
         }
 
+        const handlePlay = () => {
+          setOnScreenShare((prev) => ({ ...prev, [userId]: true }));
+          setIsVideoPlaying((prev) => ({ ...prev, [userId]: true }));
+        };
+
         screenShareVideoRefs.current[userId].addEventListener(
           "play",
           handlePlay
         );
       } else {
-        screenShareVideoRefs.current[userId]?.removeEventListener(
-          "play",
-          handlePlay
-        );
+        if (
+          screenShareVideoRefs.current[userId] &&
+          screenShareVideoHandlersRef.current[userId]
+        ) {
+          screenShareVideoRefs.current[userId].removeEventListener(
+            "play",
+            screenShareVideoHandlersRef.current[userId].handlePlay
+          );
+        }
+
+        delete screenShareVideoHandlersRef.current[userId];
         delete screenShareVideoRefs.current[userId];
       }
     },
-    []
+    [authUser]
   );
 
   //  ---- ActionBar Functions ----
