@@ -344,16 +344,12 @@ export default function Room() {
   //  ---- ---- ---- ---- ---- ----
 
   //  ---- ChatList Functions ----
-  const handleMessageSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const { message } = Object.fromEntries(new FormData(form));
+  const sendMessage = (message: string) => {
     socket?.emit(
       "chat_send_message",
       { roomCode, message },
       (_: SocketResponse) => {}
     );
-    form.reset();
   };
   //  ---- ---- ---- ---- ---- ---
 
@@ -969,10 +965,7 @@ export default function Room() {
       </div>
       {onChat && (
         <div className={styles.chatSection}>
-          <ChatList
-            chatList={chatList}
-            handleMessageSubmit={handleMessageSubmit}
-          />
+          <ChatList chatList={chatList} sendMessage={sendMessage} />
         </div>
       )}
       {toastMessage && (

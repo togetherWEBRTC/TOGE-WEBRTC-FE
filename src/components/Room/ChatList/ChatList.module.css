@@ -4,6 +4,12 @@
   list-style: none;
   padding: 10px;
   outline: none;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
 }
 
 .chatList li {
@@ -47,4 +53,9 @@
 
 .inputContainer button:hover {
   background-color: var(--secondary-400);
+}
+
+.inputContainer button:disabled {
+  background-color: var(--grey-200);
+  cursor: default;
 }
