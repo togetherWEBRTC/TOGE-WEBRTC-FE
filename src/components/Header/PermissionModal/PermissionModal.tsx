@@ -16,6 +16,8 @@ export default function PermissionModal({ onClose }: Props) {
     useMediaState();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>();
 
+  const [openSelect, setOpenSelect] = useState<"mic" | "cam" | null>(null);
+
   useEffect(() => {
     let micPermissionStatus: PermissionStatus | null = null;
     let camPermissionStatus: PermissionStatus | null = null;
@@ -117,6 +119,10 @@ export default function PermissionModal({ onClose }: Props) {
                   selectDevice("microphone", id, option);
                 }}
                 disabled={micPermission !== "granted" || devices?.length === 0}
+                onToggle={() => {
+                  setOpenSelect(openSelect === "mic" ? null : "mic");
+                }}
+                open={openSelect === "mic"}
               />
               <Button
                 size="md"
@@ -160,6 +166,10 @@ export default function PermissionModal({ onClose }: Props) {
                   selectDevice("camera", id, option);
                 }}
                 disabled={camPermission !== "granted" || devices?.length === 0}
+                onToggle={() => {
+                  setOpenSelect(openSelect === "cam" ? null : "cam");
+                }}
+                open={openSelect === "cam"}
               />
               <Button
                 size="md"

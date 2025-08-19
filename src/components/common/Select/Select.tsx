@@ -11,6 +11,8 @@ type Props = {
   defaultValue?: string;
   disabled?: boolean;
   handleSelect?: (option: string, id: string) => void; // 공유하는 상태가 있을 때, 상태를 변경하는데 사용
+  open?: boolean; // 외부에서 열림 상태 제어 시 사용 ( Select를 여러개 사용하는 경우 )
+  onToggle?: () => void; // 외부에서 열림 상태 제어 시 사용 ( 열림/닫힘 토글 제어 )
 };
 
 export default function Select({
@@ -20,6 +22,8 @@ export default function Select({
   ids,
   disabled = false,
   handleSelect,
+  open,
+  onToggle,
 }: Props) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [value, setValue] = useState(defaultValue);
@@ -29,11 +33,26 @@ export default function Select({
     setValue(defaultValue);
   }, [defaultValue]);
 
+  useEffect(() => {
+    if (open === undefined) {
+      return;
+    }
+    if (open) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [open]);
+
   return (
     <div
       className={`${getClassNames(size)} ${disabled && styles.disabled}`}
       onClick={(e: MouseEvent<HTMLDivElement>) => {
-        setIsOpen((prev) => !prev);
+        if (onToggle) {
+          onToggle();
+        } else {
+          setIsOpen((prev) => !prev);
+        }
 
         if (!(e.target instanceof HTMLLIElement)) {
           return;
