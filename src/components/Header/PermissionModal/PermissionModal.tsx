@@ -50,10 +50,10 @@ export default function PermissionModal({ onClose }: Props) {
 
     const setupPermissionListeners = async () => {
       micPermissionStatus = await navigator.permissions.query({
-        name: "microphone",
+        name: "microphone" as PermissionName,
       });
       camPermissionStatus = await navigator.permissions.query({
-        name: "camera",
+        name: "camera" as PermissionName,
       });
 
       micPermissionStatus.onchange = handleMicPermissionChange;
